@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  cipherjet-print — convenience wrapper around the Cipherjet tools.
+#
+#  Ties the three binaries into an everyday workflow:
+#     cipherjet-print setup               one-time: create the master key
+#     cipherjet-print print <file> [prn]  encrypt a document into the spool
+#     cipherjet-print list                show spooled (encrypted) jobs
+#     cipherjet-print release <id> [prn]  decrypt a job and send it to a printer
+#     cipherjet-print release-all [prn]   release every spooled job
+#     cipherjet-print audit               verify the audit-log hash chain
+#
+#  [prn] is an optional CUPS printer name; defaults to your system default.
+#
+#  Configuration:
+#     CIPHERJET_HOME       data dir (default: ~/.local/share/cipherjet)
+#     passphrase           read from ~/.config/cipherjet/passphrase (0600),
+#                          created on first `setup`. Rotate the on-disk key with:
+#                             cipherjet-keygen change
+# =============================================================================
+set -euo pipefail
+
+# --- Locate the built binaries relative to this script ----------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="${CIPHERJET_BUILD:-$SCRIPT_DIR/../build}"
+DRV="$BUILD_DIR/cipherjet"
+REL="$BUILD_DIR/cipherjet-release"
+KEYGEN="$BUILD_DIR/cipherjet-keygen"
+for b in "$DRV" "$REL" "$KEYGEN"; do
+  [ -x "$b" ] || { echo "cipherjet-print: missing binary $b — build the project first" >&2; exit 1; }
+done
+
+# --- Persistent data directory + passphrase ---------------------------------
+export CIPHERJET_HOME="${CIPHERJET_HOME:-$HOME/.local/share/cipherjet}"
+PASS_FILE="$HOME/.config/cipherjet/passphrase"
+
+load_passphrase() {
+  if [ -n "${CIPHERJET_PASSPHRASE:-}" ]; then return; fi
+  if [ -f "$PASS_FILE" ]; then
+    CIPHERJET_PASSPHRASE="$(cat "$PASS_FILE")"; export CIPHERJET_PASSPHRASE; return
+  fi
+  echo "cipherjet-print: no passphrase found — run 'cipherjet-print setup' first" >&2
+  exit 1
+}
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  setup)
+    mkdir -p "$(dirname "$PASS_FILE")"; chmod 700 "$(dirname "$PASS_FILE")"
+    if [ -f "$PASS_FILE" ]; then
+      echo "cipherjet-print: passphrase file already exists at $PASS_FILE"
+    else
+      # Generate a strong random passphrase and store it locked-down (0600).
+      # Replace its contents with a passphrase you choose, then rotate the
+      # on-disk key with: cipherjet-keygen change
+      umask 077
+      head -c 32 /dev/urandom | base64 | tr -d '\n' > "$PASS_FILE"
+      chmod 600 "$PASS_FILE"
+      echo "cipherjet-print: generated a passphrase at $PASS_FILE (keep it safe)"
+    fi
+    load_passphrase
+    if "$KEYGEN" init --strength moderate 2>/dev/null; then
+      echo "cipherjet-print: master key created."
+    else
+      echo "cipherjet-print: master key already present (leaving it untouched)."
+    fi
+    ;;
+
+  print)
+    [ $# -ge 1 ] || { echo "usage: cipherjet-print print <file> [printer]" >&2; exit 2; }
+    load_passphrase
+    file="$1"; user="$(whoami)"; title="$(basename "$file")"
+    [ -f "$file" ] || { echo "cipherjet-print: no such file: $file" >&2; exit 2; }
+    "$DRV" "job" "$user" "$title" 1 "" "$file"
+    ;;
+
+  list)
+    load_passphrase
+    "$REL" list
+    ;;
+
+  release)
+    [ $# -ge 1 ] || { echo "usage: cipherjet-print release <job-id> [printer]" >&2; exit 2; }
+    load_passphrase
+    id="$1"; printer="${2:-}"
+    if [ -n "$printer" ]; then
+      "$REL" release "$id" | lp -d "$printer"
+    else
+      "$REL" release "$id" | lp
+    fi
+    ;;
+
+  release-all)
+    load_passphrase
+    printer="${1:-}"
+    # The job table is printed on stderr; capture ids from there.
+    ids="$("$REL" list 2>&1 1>/dev/null | awk 'NR>1 && $1 ~ /^[0-9a-f]{32}$/ {print $1}')"
+    [ -n "$ids" ] || { echo "cipherjet-print: no jobs to release"; exit 0; }
+    for id in $ids; do
+      echo "cipherjet-print: releasing $id" >&2
+      if [ -n "$printer" ]; then "$REL" release "$id" | lp -d "$printer"
+      else "$REL" release "$id" | lp; fi
+    done
+    ;;
+
+  audit)
+    "$REL" verify-audit
+    ;;
+
+  *)
+    sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 2
+    ;;
+esac

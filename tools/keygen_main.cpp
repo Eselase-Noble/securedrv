@@ -1,13 +1,13 @@
 // =============================================================================
-//  keygen_main.cpp — "securedrv-keygen": create or re-key the master key.
+//  keygen_main.cpp — "cipherjet-keygen": create or re-key the master key.
 //
 //  Subcommands:
 //    init                 Create a new master key (fails if one exists).
 //    change               Rotate the master-key passphrase in place.
 //
 //  Passphrases are read from the environment so the tool can run unattended:
-//    SECUREDRV_PASSPHRASE       current / new passphrase (for init)
-//    SECUREDRV_NEW_PASSPHRASE   new passphrase (for change)
+//    CIPHERJET_PASSPHRASE       current / new passphrase (for init)
+//    CIPHERJET_NEW_PASSPHRASE   new passphrase (for change)
 //
 //  Optional:  --strength interactive|moderate|sensitive   (KDF hardness)
 // =============================================================================
@@ -26,14 +26,14 @@ namespace {
 
 void usage() {
     std::cerr <<
-        "securedrv-keygen — master key management\n"
+        "cipherjet-keygen — master key management\n"
         "Usage:\n"
-        "  securedrv-keygen init   [--strength interactive|moderate|sensitive]\n"
-        "  securedrv-keygen change [--strength ...]\n\n"
+        "  cipherjet-keygen init   [--strength interactive|moderate|sensitive]\n"
+        "  cipherjet-keygen change [--strength ...]\n\n"
         "Environment:\n"
-        "  SECUREDRV_PASSPHRASE       passphrase (init) / OLD passphrase (change)\n"
-        "  SECUREDRV_NEW_PASSPHRASE   new passphrase (change)\n"
-        "  SECUREDRV_HOME             optional data-directory override\n";
+        "  CIPHERJET_PASSPHRASE       passphrase (init) / OLD passphrase (change)\n"
+        "  CIPHERJET_NEW_PASSPHRASE   new passphrase (change)\n"
+        "  CIPHERJET_HOME             optional data-directory override\n";
 }
 
 KeyManager::KdfStrength parse_strength(int argc, char** argv) {
@@ -66,17 +66,19 @@ int main(int argc, char** argv) try {
     KeyManager::KdfStrength strength = parse_strength(argc, argv);
 
     if (cmd == "init") {
-        std::string pass = require_env("SECUREDRV_PASSPHRASE");
+        // Resolve via CIPHERJET_PASSPHRASE / _FILE / default file, so keygen and
+        // the driver agree on where the passphrase comes from.
+        std::string pass = Config::passphrase_from_env();
         KeyManager::create_master_key(cfg.key_path, pass, strength);
-        std::cerr << "securedrv-keygen: created master key at " << cfg.key_path << "\n";
+        std::cerr << "cipherjet-keygen: created master key at " << cfg.key_path << "\n";
         return 0;
     }
 
     if (cmd == "change") {
-        std::string oldp = require_env("SECUREDRV_PASSPHRASE");
-        std::string newp = require_env("SECUREDRV_NEW_PASSPHRASE");
+        std::string oldp = Config::passphrase_from_env();
+        std::string newp = require_env("CIPHERJET_NEW_PASSPHRASE");
         KeyManager::change_passphrase(cfg.key_path, oldp, newp, strength);
-        std::cerr << "securedrv-keygen: passphrase rotated for " << cfg.key_path << "\n";
+        std::cerr << "cipherjet-keygen: passphrase rotated for " << cfg.key_path << "\n";
         return 0;
     }
 
@@ -84,9 +86,9 @@ int main(int argc, char** argv) try {
     return 2;
 
 } catch (const securedrv::Error& e) {
-    std::cerr << "securedrv-keygen: " << e.what() << "\n";
+    std::cerr << "cipherjet-keygen: " << e.what() << "\n";
     return 1;
 } catch (const std::exception& e) {
-    std::cerr << "securedrv-keygen: unexpected error: " << e.what() << "\n";
+    std::cerr << "cipherjet-keygen: unexpected error: " << e.what() << "\n";
     return 1;
 }

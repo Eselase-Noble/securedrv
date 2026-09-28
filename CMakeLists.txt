@@ -1,12 +1,12 @@
 # =============================================================================
-#  SecureDrv — Encrypting Printer Driver
+#  Cipherjet — Encrypting Printer Driver
 #  Top-level CMake build definition.
 #
 #  Targets produced:
 #    * securedrv_core      (static library)  — reusable crypto / spool engine
-#    * securedrv           (executable)      — the CUPS-style filter "driver"
-#    * securedrv-release   (executable)      — decrypt & release a spooled job
-#    * securedrv-keygen    (executable)      — create / rotate the master key
+#    * cipherjet           (executable)      — the driver / CUPS backend
+#    * cipherjet-release   (executable)      — decrypt & release a spooled job
+#    * cipherjet-keygen    (executable)      — create / rotate the master key
 #    * securedrv_tests     (executable)      — self-contained unit tests
 #
 #  Build:
@@ -16,9 +16,9 @@
 # =============================================================================
 cmake_minimum_required(VERSION 3.16)
 
-project(SecureDrv
+project(Cipherjet
     VERSION 1.0.0
-    DESCRIPTION "Enterprise encrypting printer driver (CUPS filter) using libsodium"
+    DESCRIPTION "Cipherjet — enterprise encrypting printer driver using libsodium"
     LANGUAGES CXX)
 
 # ---- Global language / hardening settings -----------------------------------
@@ -76,14 +76,15 @@ target_link_libraries(securedrv_core PUBLIC PkgConfig::SODIUM)
 # =============================================================================
 #  Executables
 # =============================================================================
-add_executable(securedrv         src/driver_filter.cpp)
-target_link_libraries(securedrv         PRIVATE securedrv_core)
+# The driver. Also serves as the CUPS backend (see install/).
+add_executable(cipherjet         src/driver_filter.cpp)
+target_link_libraries(cipherjet         PRIVATE securedrv_core)
 
-add_executable(securedrv-release tools/release_main.cpp)
-target_link_libraries(securedrv-release PRIVATE securedrv_core)
+add_executable(cipherjet-release tools/release_main.cpp)
+target_link_libraries(cipherjet-release PRIVATE securedrv_core)
 
-add_executable(securedrv-keygen  tools/keygen_main.cpp)
-target_link_libraries(securedrv-keygen  PRIVATE securedrv_core)
+add_executable(cipherjet-keygen  tools/keygen_main.cpp)
+target_link_libraries(cipherjet-keygen  PRIVATE securedrv_core)
 
 # =============================================================================
 #  Tests
@@ -95,5 +96,5 @@ add_test(NAME unit_tests COMMAND securedrv_tests)
 
 # ---- Install rules (enterprise deployment) ----------------------------------
 include(GNUInstallDirs)
-install(TARGETS securedrv securedrv-release securedrv-keygen
+install(TARGETS cipherjet cipherjet-release cipherjet-keygen
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

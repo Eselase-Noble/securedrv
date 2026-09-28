@@ -1,5 +1,5 @@
 // =============================================================================
-//  release_main.cpp — "securedrv-release": decrypt and release spooled jobs.
+//  release_main.cpp — "cipherjet-release": decrypt and release spooled jobs.
 //
 //  This is the trusted side of the pipeline. It decrypts a spooled job back to
 //  plaintext and streams it to stdout, from where it can be piped to the real
@@ -11,7 +11,7 @@
 //    release <job-id> [--keep]  Decrypt <job-id> to stdout; remove unless --keep.
 //    verify-audit               Re-walk the audit chain and report tampering.
 //
-//  Environment: SECUREDRV_PASSPHRASE (required), SECUREDRV_HOME (optional).
+//  Environment: CIPHERJET_PASSPHRASE (required), CIPHERJET_HOME (optional).
 // =============================================================================
 #include <cstdlib>
 #include <ctime>
@@ -33,12 +33,12 @@ namespace {
 
 void usage() {
     std::cerr <<
-        "securedrv-release — decrypt and release spooled print jobs\n"
+        "cipherjet-release — decrypt and release spooled print jobs\n"
         "Usage:\n"
-        "  securedrv-release list\n"
-        "  securedrv-release release <job-id> [--keep]\n"
-        "  securedrv-release verify-audit\n\n"
-        "Environment: SECUREDRV_PASSPHRASE (required), SECUREDRV_HOME (optional)\n";
+        "  cipherjet-release list\n"
+        "  cipherjet-release release <job-id> [--keep]\n"
+        "  cipherjet-release verify-audit\n\n"
+        "Environment: CIPHERJET_PASSPHRASE (required), CIPHERJET_HOME (optional)\n";
 }
 
 /// Render a unix timestamp as local ISO-8601-ish text for the listing.
@@ -86,7 +86,7 @@ int do_release(const Config& cfg, const SecureBuffer& mk,
     const std::string path = spool.path_for(job_id);
     std::ifstream in(path, std::ios::binary);
     if (!in) {
-        std::cerr << "securedrv-release: no such job: " << job_id << "\n";
+        std::cerr << "cipherjet-release: no such job: " << job_id << "\n";
         return 2;
     }
 
@@ -110,7 +110,7 @@ int do_release(const Config& cfg, const SecureBuffer& mk,
                      "title=\"" + meta.title + "\" bytes=" +
                          std::to_string(meta.original_size) + " removed=no");
     }
-    std::cerr << "securedrv-release: released job " << meta.id_hex() << "\n";
+    std::cerr << "cipherjet-release: released job " << meta.id_hex() << "\n";
     return 0;
 }
 
@@ -138,7 +138,7 @@ int main(int argc, char** argv) try {
     if (cmd == "verify-audit") return do_verify_audit(cfg);
 
     if (!KeyManager::exists(cfg.key_path)) {
-        std::cerr << "securedrv-release: no master key at " << cfg.key_path << "\n";
+        std::cerr << "cipherjet-release: no master key at " << cfg.key_path << "\n";
         return 2;
     }
     std::string passphrase = Config::passphrase_from_env();
@@ -157,9 +157,9 @@ int main(int argc, char** argv) try {
     return 2;
 
 } catch (const securedrv::Error& e) {
-    std::cerr << "securedrv-release: " << e.what() << "\n";
+    std::cerr << "cipherjet-release: " << e.what() << "\n";
     return 1;
 } catch (const std::exception& e) {
-    std::cerr << "securedrv-release: unexpected error: " << e.what() << "\n";
+    std::cerr << "cipherjet-release: unexpected error: " << e.what() << "\n";
     return 1;
 }

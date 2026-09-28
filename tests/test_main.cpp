@@ -9,7 +9,7 @@
 //    * master-key file create/load/rotate,
 //    * audit-log hash-chain verification and tamper detection.
 //
-//  The tests are hermetic: they point SECUREDRV_HOME at a fresh temp directory.
+//  The tests are hermetic: they point CIPHERJET_HOME at a fresh temp directory.
 // =============================================================================
 #include <sodium.h>
 
@@ -261,9 +261,9 @@ int main() {
                          static_cast<unsigned long long>(randombytes_random())));
     fs::create_directories(home);
 #if defined(_WIN32)
-    _putenv_s("SECUREDRV_HOME", home.string().c_str());
+    _putenv_s("CIPHERJET_HOME", home.string().c_str());
 #else
-    setenv("SECUREDRV_HOME", home.string().c_str(), 1);
+    setenv("CIPHERJET_HOME", home.string().c_str(), 1);
 #endif
 
     test_secure_buffer();

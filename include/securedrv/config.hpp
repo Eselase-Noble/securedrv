@@ -4,7 +4,7 @@
 //  Centralises every filesystem location the engine uses so the executables
 //  agree on where the master key, spool and audit log live. All paths derive
 //  from a single data directory (platform::default_data_dir()), overridable via
-//  the SECUREDRV_HOME environment variable for tests and custom deployments.
+//  the CIPHERJET_HOME environment variable for tests and custom deployments.
 // =============================================================================
 #ifndef SECUREDRV_CONFIG_HPP
 #define SECUREDRV_CONFIG_HPP
@@ -20,10 +20,10 @@ struct Config {
     std::string audit_path;  ///< Audit log file (data_dir/audit.log).
 
     /// Resolve all paths from the environment, creating any missing directories
-    /// with owner-only permissions. Honours SECUREDRV_HOME.
+    /// with owner-only permissions. Honours CIPHERJET_HOME.
     static Config load();
 
-    /// Read the master-key passphrase from the SECUREDRV_PASSPHRASE environment
+    /// Read the master-key passphrase from the CIPHERJET_PASSPHRASE environment
     /// variable. Throws ConfigError if it is unset, so a passphrase is never
     /// silently defaulted. (Interactive prompting can be layered on top later.)
     static std::string passphrase_from_env();

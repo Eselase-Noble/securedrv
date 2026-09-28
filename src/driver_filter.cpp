@@ -1,5 +1,5 @@
 // =============================================================================
-//  driver_filter.cpp — The "securedrv" printer driver entry point.
+//  driver_filter.cpp — The "cipherjet" printer driver entry point.
 //
 //  This is the program a print system invokes for every job. It behaves like a
 //  CUPS filter: it consumes the raw job on stdin (or from a file argument),
@@ -13,8 +13,8 @@
 //  wired into CUPS (macOS/Linux) or fed by a redirected printer port (Windows).
 //
 //  Configuration (all via environment, so it is deployment-agnostic):
-//      SECUREDRV_PASSPHRASE   master-key passphrase (required)
-//      SECUREDRV_HOME         optional data-directory override
+//      CIPHERJET_PASSPHRASE   master-key passphrase (required)
+//      CIPHERJET_HOME         optional data-directory override
 // =============================================================================
 #include <cstdlib>
 #include <ctime>
@@ -48,13 +48,13 @@ namespace {
 /// Print CUPS-style usage to stderr.
 void print_usage() {
     std::cerr <<
-        "securedrv — encrypting printer driver (CUPS filter)\n"
+        "cipherjet — encrypting printer driver (CUPS filter)\n"
         "Usage:\n"
-        "  securedrv [job-id user title copies options [file]]\n"
-        "  securedrv --help\n\n"
+        "  cipherjet [job-id user title copies options [file]]\n"
+        "  cipherjet --help\n\n"
         "Reads a print job from the file argument (if given) or stdin, encrypts\n"
         "it into the secure spool, and logs the event. Requires the environment\n"
-        "variable SECUREDRV_PASSPHRASE to unlock the master key.\n";
+        "variable CIPHERJET_PASSPHRASE to unlock the master key.\n";
 }
 
 }  // namespace
@@ -63,10 +63,27 @@ int main(int argc, char** argv) try {
     // Binary stdio is mandatory: print data and ciphertext must pass byte-exact.
     platform::set_standard_streams_binary();
 
+    // --- CUPS backend device discovery ---------------------------------------
+    // When CUPS enumerates backends it runs this program with NO arguments and
+    // expects one device line on stdout:
+    //     class  uri  "make-and-model"  "info"
+    // Advertising ourselves here is what makes "Cipherjet (Encrypted)" available
+    // when an administrator adds the printer.
+    if (argc == 1) {
+        std::cout << "direct cipherjet:/secure-spool "
+                     "\"Cipherjet Secure Printer\" \"Cipherjet (Encrypted)\"\n";
+        return 0;  // CUPS_BACKEND_OK
+    }
+
     if (argc >= 2 && std::string(argv[1]) == "--help") {
         print_usage();
         return 0;
     }
+
+    // Both CUPS backends and filters are invoked with the same positional
+    // arguments — argv[1..6] = job-id, user, title, copies, options, [file] —
+    // (the device URI arrives via the DEVICE_URI environment variable, which we
+    // don't need). So the parsing below serves every deployment uniformly.
 
     // Resolve CUPS-style positional arguments when present.
     std::string title = "print-job";
@@ -79,8 +96,8 @@ int main(int argc, char** argv) try {
     // Load configuration and unlock the master key.
     Config cfg = Config::load();
     if (!KeyManager::exists(cfg.key_path)) {
-        std::cerr << "securedrv: no master key found at " << cfg.key_path
-                  << " — run 'securedrv-keygen' first.\n";
+        std::cerr << "cipherjet: no master key found at " << cfg.key_path
+                  << " — run 'cipherjet-keygen' first.\n";
         return 2;
     }
     std::string passphrase = Config::passphrase_from_env();
@@ -92,7 +109,7 @@ int main(int argc, char** argv) try {
     if (!input_file.empty()) {
         file_in.open(input_file, std::ios::binary);
         if (!file_in) {
-            std::cerr << "securedrv: cannot open input file " << input_file << "\n";
+            std::cerr << "cipherjet: cannot open input file " << input_file << "\n";
             return 2;
         }
         in = &file_in;
@@ -127,7 +144,7 @@ int main(int argc, char** argv) try {
     {
         std::ofstream out(tmp_path, std::ios::binary | std::ios::trunc);
         if (!out) {
-            std::cerr << "securedrv: cannot create spool file\n";
+            std::cerr << "cipherjet: cannot create spool file\n";
             return 2;
         }
         engine.encrypt_stream(*in, out, master_key, meta);
@@ -139,7 +156,7 @@ int main(int argc, char** argv) try {
     std::filesystem::rename(tmp_path, final_path, ec);
     if (ec) {
         std::filesystem::remove(tmp_path, ec);
-        std::cerr << "securedrv: failed to commit spool file: " << ec.message() << "\n";
+        std::cerr << "cipherjet: failed to commit spool file: " << ec.message() << "\n";
         return 2;
     }
 
@@ -150,15 +167,15 @@ int main(int argc, char** argv) try {
                      std::to_string(meta.original_size));
 
     // CUPS treats a filter's stderr as status output; report the queued job id.
-    std::cerr << "securedrv: queued encrypted job " << meta.id_hex()
+    std::cerr << "cipherjet: queued encrypted job " << meta.id_hex()
               << " (" << meta.original_size << " bytes)\n";
     return 0;
 
 } catch (const securedrv::Error& e) {
     // Domain errors (crypto/integrity/format/io/config) — clean, expected exits.
-    std::cerr << "securedrv: " << e.what() << "\n";
+    std::cerr << "cipherjet: " << e.what() << "\n";
     return 1;
 } catch (const std::exception& e) {
-    std::cerr << "securedrv: unexpected error: " << e.what() << "\n";
+    std::cerr << "cipherjet: unexpected error: " << e.what() << "\n";
     return 1;
 }

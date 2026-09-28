@@ -106,14 +106,14 @@ void restrict_to_owner(const std::string& path)     { apply_owner_only_dacl(path
 void restrict_dir_to_owner(const std::string& path) { apply_owner_only_dacl(path); }
 
 std::string default_data_dir() {
-    if (const char* over = std::getenv("SECUREDRV_HOME"); over && *over) {
+    if (const char* over = std::getenv("CIPHERJET_HOME"); over && *over) {
         make_directories(over);
         restrict_dir_to_owner(over);
         return over;
     }
     const char* appdata = std::getenv("APPDATA");
     std::string base = (appdata && *appdata) ? appdata : ".";
-    std::string dir  = path_join(base, "SecureDrv");
+    std::string dir  = path_join(base, "Cipherjet");
     make_directories(dir);
     restrict_dir_to_owner(dir);
     return dir;
@@ -144,7 +144,7 @@ void restrict_dir_to_owner(const std::string& path) {
 
 std::string default_data_dir() {
     // 1) Explicit override wins everywhere and makes tests hermetic.
-    if (const char* over = std::getenv("SECUREDRV_HOME"); over && *over) {
+    if (const char* over = std::getenv("CIPHERJET_HOME"); over && *over) {
         make_directories(over);
         restrict_dir_to_owner(over);
         return over;
@@ -152,11 +152,11 @@ std::string default_data_dir() {
     // 2) Respect the XDG base-directory spec when present.
     std::string base;
     if (const char* xdg = std::getenv("XDG_DATA_HOME"); xdg && *xdg) {
-        base = path_join(xdg, "securedrv");
+        base = path_join(xdg, "cipherjet");
     } else if (const char* home = std::getenv("HOME"); home && *home) {
-        base = path_join(path_join(home, ".local/share"), "securedrv");
+        base = path_join(path_join(home, ".local/share"), "cipherjet");
     } else {
-        base = "./securedrv";  // Last-resort fallback (e.g. no HOME in a daemon).
+        base = "./cipherjet";  // Last-resort fallback (e.g. no HOME in a daemon).
     }
     make_directories(base);
     restrict_dir_to_owner(base);
