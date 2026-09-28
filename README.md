@@ -289,4 +289,4 @@ See `src/crypto_engine.cpp` for the authoritative, commented implementation.
 
 ## License
 
-[MIT](LICENSE) © 2026 Eselase-Noble
+[MIT](LICENSE) © 2026 Noble Eselase Vulley
