@@ -1,0 +1,30 @@
+# Build output
+/build/
+*.o
+*.obj
+*.a
+*.lib
+
+# SecureDrv runtime state (never commit keys, spool, or audit logs)
+*.spmk
+*.spjob
+audit.log
+/securedrv-data/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+
+# Temporary spool artifacts
+.incoming-*
+*.tmp
+
+# Editor / OS noise
+.DS_Store
+compile_commands.json
+.vscode/
+.idea/
+*.swp
