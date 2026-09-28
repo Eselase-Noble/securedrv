@@ -31,6 +31,34 @@ end users just press **⌘P / Ctrl-P** and pick *Cipherjet (Encrypted)*.
 
 ---
 
+## Quick install
+
+**One command** (fetches, builds, installs, and registers the printer):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/main/install.sh | bash
+```
+
+It installs the build dependencies for your OS (Homebrew / apt / dnf / pacman /
+zypper), compiles in Release mode, installs the binaries to `/usr/local/bin`,
+and registers **Cipherjet (Encrypted)** as a printer. Add `--no-printer` to skip
+the queue, or `--uninstall` to remove everything.
+
+**From a clone**, using `make`:
+
+```bash
+git clone https://github.com/Eselase-Noble/securedrv.git && cd securedrv
+make            # build
+make test       # run the 58-check test suite
+make printer    # register the printer (sudo)   — or `make install` for binaries only
+```
+
+**Prebuilt binaries:** download a tarball for your platform from the
+[Releases](https://github.com/Eselase-Noble/securedrv/releases) page (produced by
+CI), unpack, and run `sudo ./install/install-cups-printer.sh`.
+
+---
+
 ## Why this design
 
 Printing is a classic data-leak vector: jobs sit in spool directories as
