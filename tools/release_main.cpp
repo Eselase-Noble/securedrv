@@ -27,6 +27,10 @@
 #include "securedrv/platform.hpp"
 #include "securedrv/errors.hpp"
 
+#ifndef CIPHERJET_VERSION
+#define CIPHERJET_VERSION "0.0.0-dev"
+#endif
+
 using namespace securedrv;
 
 namespace {
@@ -129,6 +133,10 @@ int do_verify_audit(const Config& cfg) {
 
 int main(int argc, char** argv) try {
     platform::set_standard_streams_binary();
+    if (argc >= 2 && std::string(argv[1]) == "--version") {
+        std::cout << "cipherjet-release " CIPHERJET_VERSION "\n";
+        return 0;
+    }
     if (argc < 2) { usage(); return 2; }
     const std::string cmd = argv[1];
 

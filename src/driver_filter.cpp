@@ -41,6 +41,10 @@
 #include "securedrv/util.hpp"
 #include "securedrv/errors.hpp"
 
+#ifndef CIPHERJET_VERSION
+#define CIPHERJET_VERSION "0.0.0-dev"
+#endif
+
 using namespace securedrv;
 
 namespace {
@@ -73,6 +77,11 @@ int main(int argc, char** argv) try {
         std::cout << "direct cipherjet:/secure-spool "
                      "\"Cipherjet Secure Printer\" \"Cipherjet (Encrypted)\"\n";
         return 0;  // CUPS_BACKEND_OK
+    }
+
+    if (argc >= 2 && std::string(argv[1]) == "--version") {
+        std::cout << "cipherjet " CIPHERJET_VERSION "\n";
+        return 0;
     }
 
     if (argc >= 2 && std::string(argv[1]) == "--help") {

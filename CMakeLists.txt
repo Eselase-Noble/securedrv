@@ -73,6 +73,11 @@ target_include_directories(securedrv_core
 
 target_link_libraries(securedrv_core PUBLIC PkgConfig::SODIUM)
 
+# Propagate the project version into the code as CIPHERJET_VERSION so every
+# executable can answer `--version`. Single source of truth: project(... VERSION).
+target_compile_definitions(securedrv_core
+    PUBLIC CIPHERJET_VERSION="${PROJECT_VERSION}")
+
 # =============================================================================
 #  Executables
 # =============================================================================

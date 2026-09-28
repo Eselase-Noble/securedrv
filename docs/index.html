@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cipherjet — Encrypted printing, end to end</title>
+<meta name="description" content="Cipherjet is a cross-platform printer driver that encrypts every print job at capture and decrypts only at release. Built in C++ on libsodium.">
+<style>
+  :root{
+    --bg:#0a0d13; --bg-2:#0f141d; --panel:#121927; --line:#1e2838;
+    --ink:#e8eef7; --muted:#93a1b5; --dim:#63718a;
+    --accent:#5eead4; --accent-2:#38bdf8; --accent-ink:#04211d;
+    --radius:14px; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(1200px 600px at 80% -10%,rgba(94,234,212,.09),transparent 60%),
+                     radial-gradient(900px 500px at 0% 0%,rgba(56,189,248,.07),transparent 55%);
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* Nav */
+  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
+      background:rgba(10,13,19,.72);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;gap:20px;height:62px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+  .brand .dot{width:22px;height:22px;border-radius:6px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    box-shadow:0 0 18px rgba(94,234,212,.5)}
+  nav .links{display:flex;gap:22px;margin-left:auto;color:var(--muted);font-size:.94rem}
+  nav .links a:hover{color:var(--ink)}
+  .ghost{border:1px solid var(--line);padding:7px 13px;border-radius:9px;color:var(--ink)!important}
+  .ghost:hover{border-color:var(--accent)}
+  @media(max-width:720px){nav .links a:not(.ghost){display:none}}
+
+  /* Hero */
+  header{padding:88px 0 56px;text-align:center}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);
+    font-size:.8rem;color:var(--accent);border:1px solid var(--line);
+    background:var(--panel);padding:6px 12px;border-radius:999px;margin-bottom:26px}
+  .badge b{color:var(--ink)}
+  h1{font-size:clamp(2.6rem,7vw,4.6rem);line-height:1.02;margin:.1em 0 .2em;
+     letter-spacing:-1.5px;font-weight:800}
+  h1 .grad{background:linear-gradient(120deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .tag{font-size:clamp(1.05rem,2.5vw,1.35rem);color:var(--muted);max-width:620px;margin:0 auto 34px}
+  .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+  .btn{padding:13px 22px;border-radius:11px;font-weight:600;font-size:.98rem;cursor:pointer;border:1px solid transparent}
+  .btn.primary{background:linear-gradient(120deg,var(--accent),var(--accent-2));color:var(--accent-ink)}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.line{background:transparent;border-color:var(--line);color:var(--ink)}
+  .btn.line:hover{border-color:var(--accent)}
+
+  /* Terminal / copy box */
+  .term{max-width:720px;margin:26px auto 0;text-align:left;background:var(--bg-2);
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .term .bar{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);
+    background:var(--panel)}
+  .term .bar i{width:11px;height:11px;border-radius:50%;background:#2a3547;display:inline-block}
+  .term .bar span{margin-left:auto;font-family:var(--mono);font-size:.76rem;color:var(--dim)}
+  .term .body{display:flex;align-items:center;gap:12px;padding:16px 16px}
+  .term code{font-family:var(--mono);font-size:.92rem;color:var(--ink);white-space:pre-wrap;word-break:break-all;flex:1}
+  .term code .p{color:var(--accent)}
+  .copy{border:1px solid var(--line);background:var(--panel);color:var(--muted);
+    padding:8px 12px;border-radius:8px;font-size:.82rem;cursor:pointer;white-space:nowrap}
+  .copy:hover{color:var(--ink);border-color:var(--accent)}
+
+  /* Sections */
+  section{padding:64px 0;border-top:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:.82rem;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
+  h2{font-size:clamp(1.7rem,4vw,2.4rem);margin:.3em 0 .5em;letter-spacing:-.5px}
+  .lead{color:var(--muted);max-width:640px}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+  .card:hover{border-color:#2a3a52}
+  .card .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:20px;
+    background:rgba(94,234,212,.1);border:1px solid var(--line);margin-bottom:14px}
+  .card h3{margin:.1em 0 .35em;font-size:1.08rem}
+  .card p{margin:0;color:var(--muted);font-size:.95rem}
+
+  /* Flow */
+  .flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:14px;margin-top:34px}
+  @media(max-width:860px){.flow{grid-template-columns:1fr;gap:10px}.flow .arrow{transform:rotate(90deg)}}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;text-align:center}
+  .step .n{font-family:var(--mono);color:var(--accent);font-size:.8rem}
+  .step h4{margin:.4em 0 .3em}
+  .step p{margin:0;color:var(--muted);font-size:.9rem}
+  .arrow{color:var(--dim);font-size:1.5rem;text-align:center}
+
+  /* Install blocks */
+  .installs{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:30px}
+  @media(max-width:860px){.installs{grid-template-columns:1fr}}
+  .ib{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .ib h3{margin:0 0 12px;font-size:1.05rem}
+  .cmd{display:flex;align-items:flex-start;gap:10px;background:var(--bg-2);border:1px solid var(--line);
+    border-radius:10px;padding:12px 12px;margin-bottom:10px}
+  .cmd code{font-family:var(--mono);font-size:.86rem;color:var(--ink);white-space:pre-wrap;word-break:break-all;flex:1}
+  .cmd .copy{padding:5px 9px;font-size:.75rem}
+  .ib small{color:var(--dim)}
+
+  .sec-list{list-style:none;padding:0;margin:26px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:860px){.sec-list{grid-template-columns:1fr}}
+  .sec-list li{display:flex;gap:11px;align-items:flex-start;color:var(--muted);font-size:.96rem}
+  .sec-list .ck{color:var(--accent);font-weight:700}
+
+  footer{border-top:1px solid var(--line);padding:40px 0;color:var(--dim);font-size:.9rem}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+  footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
+  .note{color:var(--dim);font-size:.82rem;margin-top:8px}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#top"><span class="dot"></span>Cipherjet</a>
+  <div class="links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#install">Install</a>
+    <a class="ghost" href="https://github.com/Eselase-Noble/securedrv">GitHub ↗</a>
+  </div>
+</div></nav>
+
+<header id="top"><div class="wrap">
+  <span class="badge">🔒 v1.0.0 · <b>MIT licensed</b> · Linux · macOS · Windows</span>
+  <h1>Encrypted printing,<br><span class="grad">end to end.</span></h1>
+  <p class="tag">Cipherjet is a printer driver that encrypts every job the instant it
+     leaves the app and decrypts it only at release. Plaintext never touches disk.</p>
+  <div class="cta">
+    <a class="btn primary" href="#install">Get started</a>
+    <a class="btn line" href="https://github.com/Eselase-Noble/securedrv/releases">Download binaries</a>
+  </div>
+  <div class="term">
+    <div class="bar"><i></i><i></i><i></i><span>install — bash</span></div>
+    <div class="body">
+      <code id="hero-cmd"><span class="p">$ </span>curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/main/install.sh | bash</code>
+      <button class="copy" data-copy="curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/main/install.sh | bash">Copy</button>
+    </div>
+  </div>
+  <p class="note">Builds, installs, and registers “Cipherjet (Encrypted)” as a printer.</p>
+</div></header>
+
+<section id="features"><div class="wrap">
+  <div class="eyebrow">Why Cipherjet</div>
+  <h2>Security you don't have to think about</h2>
+  <p class="lead">Modern authenticated cryptography via libsodium, wrapped in a driver
+     your users never notice.</p>
+  <div class="grid">
+    <div class="card"><div class="ic">🧬</div><h3>Envelope encryption</h3>
+      <p>A fresh 256-bit key per job, wrapped by an Argon2id-protected master key. Jobs are cryptographically isolated.</p></div>
+    <div class="card"><div class="ic">🌊</div><h3>Streaming AEAD</h3>
+      <p>XChaCha20-Poly1305 in authenticated 64 KiB chunks — any size job, and every bit-flip or truncation is caught.</p></div>
+    <div class="card"><div class="ic">📜</div><h3>Tamper-evident audit</h3>
+      <p>A BLAKE2b hash-chained, append-only log. Editing or deleting any entry breaks the chain and is detected.</p></div>
+    <div class="card"><div class="ic">🖨️</div><h3>Appears as a printer</h3>
+      <p>Registers with CUPS so staff just press ⌘P and pick “Cipherjet (Encrypted).” Release is admin-only.</p></div>
+    <div class="card"><div class="ic">🧩</div><h3>Cross-platform</h3>
+      <p>One portable C++17 engine on Linux, macOS and Windows; OS specifics isolated to a single file.</p></div>
+    <div class="card"><div class="ic">⚖️</div><h3>Open source</h3>
+      <p>MIT licensed, dependency-light, and covered by a self-contained test suite. Read every line.</p></div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <div class="eyebrow">How it works</div>
+  <h2>Capture → spool → release</h2>
+  <div class="flow">
+    <div class="step"><div class="n">01</div><h4>Print</h4><p>The app sends the job to the Cipherjet driver.</p></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">02</div><h4>Encrypted spool</h4><p>The job is encrypted and stored as ciphertext — never plaintext.</p></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">03</div><h4>Admin release</h4><p>A trusted operator decrypts and sends it to the real printer.</p></div>
+  </div>
+</div></section>
+
+<section id="install"><div class="wrap">
+  <div class="eyebrow">Install</div>
+  <h2>Up and running in one command</h2>
+  <p class="lead">Building runs as you; only installation and printer registration use sudo.</p>
+  <div class="installs">
+    <div class="ib">
+      <h3>One command</h3>
+      <div class="cmd"><code>curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/main/install.sh | bash</code>
+        <button class="copy" data-copy="curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/main/install.sh | bash">Copy</button></div>
+      <small>Add <code>--no-printer</code> for binaries only, or <code>--uninstall</code> to remove.</small>
+    </div>
+    <div class="ib">
+      <h3>From a clone</h3>
+      <div class="cmd"><code>git clone https://github.com/Eselase-Noble/securedrv.git
+cd securedrv &amp;&amp; make &amp;&amp; make printer</code>
+        <button class="copy" data-copy="git clone https://github.com/Eselase-Noble/securedrv.git && cd securedrv && make && make printer">Copy</button></div>
+      <small><code>make test</code> runs the suite · <code>make install</code> installs binaries only.</small>
+    </div>
+    <div class="ib">
+      <h3>Homebrew deps (macOS)</h3>
+      <div class="cmd"><code>brew install libsodium cmake pkg-config</code>
+        <button class="copy" data-copy="brew install libsodium cmake pkg-config">Copy</button></div>
+      <small>Then build with <code>make</code>. Debian: <code>apt install libsodium-dev cmake pkg-config g++</code>.</small>
+    </div>
+    <div class="ib">
+      <h3>Prebuilt binaries</h3>
+      <div class="cmd"><code>tar xzf cipherjet-*.tar.gz
+sudo ./install/install-cups-printer.sh</code>
+        <button class="copy" data-copy="tar xzf cipherjet-*.tar.gz && sudo ./install/install-cups-printer.sh">Copy</button></div>
+      <small>Grab a tarball from <a href="https://github.com/Eselase-Noble/securedrv/releases">Releases</a>.</small>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="eyebrow">Guarantees</div>
+  <h2>What the crypto buys you</h2>
+  <ul class="sec-list">
+    <li><span class="ck">✓</span> Confidentiality at rest — steal the spool and you get ciphertext.</li>
+    <li><span class="ck">✓</span> Integrity — a tampered job fails release and is preserved for review.</li>
+    <li><span class="ck">✓</span> Keys guarded in memory — locked out of swap and wiped on free.</li>
+    <li><span class="ck">✓</span> Metadata authenticity — title/time bound to the payload.</li>
+    <li><span class="ck">✓</span> Per-job key isolation — one compromise never spreads.</li>
+    <li><span class="ck">✓</span> Auditable — hash-chained log proves what happened.</li>
+  </ul>
+</div></section>
+
+<footer><div class="wrap">
+  <div>Cipherjet v1.0.0 — © 2026 Eselase-Noble · <a href="https://github.com/Eselase-Noble/securedrv/blob/main/LICENSE">MIT License</a></div>
+  <div>
+    <a href="https://github.com/Eselase-Noble/securedrv">Source</a> ·
+    <a href="https://github.com/Eselase-Noble/securedrv/releases">Releases</a> ·
+    <a href="https://github.com/Eselase-Noble/securedrv/blob/main/CHANGELOG.md">Changelog</a>
+  </div>
+</div></footer>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var text=btn.getAttribute('data-copy');
+      navigator.clipboard.writeText(text).then(function(){
+        var old=btn.textContent;btn.textContent='Copied ✓';
+        setTimeout(function(){btn.textContent=old;},1400);
+      });
+    });
+  });
+</script>
+</body>
+</html>
