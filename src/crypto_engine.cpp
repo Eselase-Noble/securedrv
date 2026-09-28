@@ -110,7 +110,7 @@ JobMetadata parse_and_unwrap(std::istream& in, const SecureBuffer& master_key,
     read_exact(in, prefix.data(), prefix.size());
     if (prefix[0] != kMagic[0] || prefix[1] != kMagic[1] ||
         prefix[2] != kMagic[2] || prefix[3] != kMagic[3]) {
-        throw FormatError("bad magic — not a SecureDrv job container");
+        throw FormatError("bad magic — not a Cipherjet job container");
     }
     if (prefix[4] != kVersion) {
         throw FormatError("unsupported container version " +

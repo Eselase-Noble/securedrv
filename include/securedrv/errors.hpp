@@ -1,5 +1,5 @@
 // =============================================================================
-//  errors.hpp — Error handling primitives for SecureDrv.
+//  errors.hpp — Error handling primitives for Cipherjet.
 //
 //  We use a small, typed exception hierarchy rather than raw error codes so that
 //  cryptographic failures can never be silently ignored: a failed decryption,
@@ -14,7 +14,7 @@
 
 namespace securedrv {
 
-/// Base class for every error raised by the SecureDrv engine.
+/// Base class for every error raised by the Cipherjet engine.
 class Error : public std::runtime_error {
 public:
     explicit Error(const std::string& what) : std::runtime_error(what) {}

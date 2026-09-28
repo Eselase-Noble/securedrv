@@ -28,3 +28,7 @@ compile_commands.json
 .vscode/
 .idea/
 *.swp
+
+# Cipherjet runtime data (belt-and-suspenders; these live outside the repo)
+passphrase
+/cipherjet-data/

@@ -1,5 +1,5 @@
 // =============================================================================
-//  test_main.cpp — Self-contained unit tests for the SecureDrv engine.
+//  test_main.cpp — Self-contained unit tests for the Cipherjet engine.
 //
 //  No external test framework: a tiny CHECK/SECTION harness keeps the build
 //  dependency-free. Tests cover the security-critical behaviours:

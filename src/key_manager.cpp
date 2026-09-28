@@ -133,7 +133,7 @@ SecureBuffer load_keyfile(const std::string& key_path,
     util::get_bytes(buf.data(), buf.size(), off, prefix.data(), prefix.size());
     if (prefix[0] != kMagic[0] || prefix[1] != kMagic[1] ||
         prefix[2] != kMagic[2] || prefix[3] != kMagic[3]) {
-        throw FormatError("not a SecureDrv master key file");
+        throw FormatError("not a Cipherjet master key file");
     }
     if (prefix[4] != kVersion) {
         throw FormatError("unsupported key file version");

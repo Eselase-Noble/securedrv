@@ -1,7 +1,7 @@
 // =============================================================================
 //  platform.hpp — Cross-platform OS abstraction layer.
 //
-//  SecureDrv is designed to run identically on Linux, macOS and Windows. Every
+//  Cipherjet is designed to run identically on Linux, macOS and Windows. Every
 //  operation that differs between operating systems is funnelled through this
 //  single interface, so the rest of the engine stays 100% portable C++17.
 //
@@ -34,11 +34,11 @@ void restrict_to_owner(const std::string& path);
 /// (POSIX 0700 / equivalent Windows ACL). Throws IoError on failure.
 void restrict_dir_to_owner(const std::string& path);
 
-/// Return the base directory in which SecureDrv stores its spool and keys,
+/// Return the base directory in which Cipherjet stores its spool and keys,
 /// honouring platform conventions and the CIPHERJET_HOME override:
 ///   * CIPHERJET_HOME if set (all platforms)
 ///   * Linux/macOS:   $XDG_DATA_HOME/securedrv  or  $HOME/.local/share/securedrv
-///   * Windows:       %APPDATA%\SecureDrv
+///   * Windows:       %APPDATA%\Cipherjet
 /// The directory is created (with owner-only permissions) if it does not exist.
 std::string default_data_dir();
 

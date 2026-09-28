@@ -1,7 +1,7 @@
 // =============================================================================
 //  crypto_engine.hpp — Authenticated, streaming envelope encryption for jobs.
 //
-//  This is the security core of SecureDrv. It transforms an arbitrary,
+//  This is the security core of Cipherjet. It transforms an arbitrary,
 //  unbounded print-job byte stream into a self-describing, tamper-evident
 //  ".spjob" container and back again.
 //

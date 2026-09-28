@@ -14,7 +14,7 @@
 namespace securedrv {
 
 struct Config {
-    std::string data_dir;    ///< Root directory for all SecureDrv state.
+    std::string data_dir;    ///< Root directory for all Cipherjet state.
     std::string key_path;    ///< Master key file (data_dir/master.spmk).
     std::string spool_dir;   ///< Directory of encrypted .spjob files.
     std::string audit_path;  ///< Audit log file (data_dir/audit.log).
