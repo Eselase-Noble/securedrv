@@ -138,6 +138,23 @@
   .method small{display:block;color:var(--ink-soft);font-size:.95rem;margin-top:10px}
   .method small code{font-family:var(--mono);font-size:.85em;background:var(--paper-2);padding:1px 5px;border-radius:2px}
 
+  /* Download */
+  .downloads{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:26px}
+  @media(max-width:680px){.downloads{grid-template-columns:1fr}}
+  .dl{display:flex;flex-direction:column;gap:3px;border:1.5px solid var(--ink);
+    border-radius:2px;padding:18px 20px;background:var(--paper);position:relative}
+  .dl:hover{background:var(--ink);text-decoration:none}
+  .dl:hover .dl-os,.dl:hover .dl-arch{color:var(--paper)}
+  .dl-os{font-family:var(--sans);font-weight:700;font-size:1.12rem;color:var(--ink)}
+  .dl-arch{font-family:var(--sans);font-weight:500;font-size:.9rem;color:var(--ink-soft)}
+  .dl.rec{border-color:var(--blue);box-shadow:0 0 0 1.5px var(--blue) inset}
+  .dl.rec::after{content:"Detected";position:absolute;top:-10px;right:14px;
+    font-family:var(--sans);font-weight:700;font-size:.68rem;letter-spacing:.03em;
+    color:var(--paper);background:var(--blue);padding:2px 8px;border-radius:2px}
+  .dl-after{margin:0 0 10px;color:var(--ink);font-size:1.02rem}
+  .dl-note{margin:14px 0 0;color:var(--ink-soft);font-size:.95rem}
+  .dl-note code,.dl-after code{font-family:var(--mono)}
+
   /* Footer */
   footer{background:var(--ink);color:var(--paper);border-bottom:none}
   footer .wrap{padding:44px 32px;display:flex;flex-wrap:wrap;gap:28px 24px;
@@ -176,7 +193,7 @@
   <nav class="nav">
     <a class="plain" href="#spec">Specification</a>
     <a class="plain" href="#custody">How it works</a>
-    <a class="plain" href="#install">Install</a>
+    <a class="plain" href="#download">Download</a>
     <a class="repo" href="https://github.com/Eselase-Noble/securedrv">View source</a>
   </nav>
 </div></header>
@@ -189,8 +206,8 @@
        moment it leaves the application. What waits in the spool is ciphertext — and
        it becomes a document again only in <em>authorized</em> hands.</p>
     <div class="actions">
-      <a class="btn solid" href="#install">Install Cipherjet</a>
-      <a class="btn hollow" href="https://github.com/Eselase-Noble/securedrv/releases">Download binaries</a>
+      <a class="btn solid" href="#download">Download Cipherjet</a>
+      <a class="btn hollow" href="#install">Build from source</a>
     </div>
     <div class="term">
       <code><b>$</b> curl -fsSL …/securedrv/main/install.sh | bash</code>
@@ -252,8 +269,29 @@
   </div>
 </div></section>
 
+<section id="download"><div class="wrap sec-pad">
+  <h2>Download</h2>
+  <p class="sec-intro" id="dl-intro">Grab a prebuilt build for your system. Each
+     archive holds the binaries, the install scripts, and the license.</p>
+  <div class="downloads">
+    <a class="dl" data-os="mac-arm" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-macos-arm64.tar.gz" download>
+      <span class="dl-os">macOS</span><span class="dl-arch">Apple Silicon</span></a>
+    <a class="dl" data-os="mac-intel" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-macos-x86_64.tar.gz" download>
+      <span class="dl-os">macOS</span><span class="dl-arch">Intel</span></a>
+    <a class="dl" data-os="linux" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-linux-x86_64.tar.gz" download>
+      <span class="dl-os">Linux</span><span class="dl-arch">x86_64</span></a>
+  </div>
+  <p class="dl-after">Once it downloads, unpack and register the printer:</p>
+  <div class="term">
+    <code><b>$</b> tar xzf cipherjet-*.tar.gz &amp;&amp; sudo ./install/install-cups-printer.sh</code>
+    <button class="copy" data-copy="tar xzf cipherjet-*.tar.gz && sudo ./install/install-cups-printer.sh">Copy</button>
+  </div>
+  <p class="dl-note">On Windows, build from source (below). All builds are also on the
+     <a href="https://github.com/Eselase-Noble/securedrv/releases">releases page</a>.</p>
+</div></section>
+
 <section id="install"><div class="wrap sec-pad">
-  <h2>Install</h2>
+  <h2>Or build it yourself</h2>
   <p class="sec-intro">Building runs as you; only installing and registering the
      printer use sudo. Pick whichever fits how you work.</p>
   <div class="methods">
@@ -282,12 +320,12 @@
       <small>On Debian: <code>apt install libsodium-dev cmake pkg-config g++</code>.</small>
     </div>
     <div class="method">
-      <h3>Prebuilt binaries</h3>
+      <h3>Windows</h3>
       <div class="term">
-        <code><b>$</b> tar xzf cipherjet-*.tar.gz</code>
-        <button class="copy" data-copy="tar xzf cipherjet-*.tar.gz && sudo ./install/install-cups-printer.sh">Copy</button>
+        <code><b>$</b> vcpkg install libsodium</code>
+        <button class="copy" data-copy="vcpkg install libsodium">Copy</button>
       </div>
-      <small>Download a build for your platform from <a href="https://github.com/Eselase-Noble/securedrv/releases">Releases</a>.</small>
+      <small>Then configure with the vcpkg toolchain and build with CMake.</small>
     </div>
   </div>
 </div></section>
@@ -313,6 +351,20 @@
       });
     });
   });
+
+  /* Highlight the download that matches the visitor's system. Architecture is
+     not reliably exposed to the browser, so on a Mac we flag both builds and
+     let the person pick Apple Silicon vs Intel. */
+  (function(){
+    var ua=(navigator.userAgent||"")+" "+(navigator.platform||"");
+    var pick=[];
+    if(/Mac/i.test(ua))         pick=['mac-arm','mac-intel'];
+    else if(/Linux|X11/i.test(ua) && !/Android/i.test(ua)) pick=['linux'];
+    pick.forEach(function(os){
+      var el=document.querySelector('.dl[data-os="'+os+'"]');
+      if(el) el.classList.add('rec');
+    });
+  })();
 </script>
 </body>
 </html>

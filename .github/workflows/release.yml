@@ -4,9 +4,13 @@
 #
 #      git tag v1.0.0 && git push origin v1.0.0
 #
-#  Produces cipherjet-<version>-<os>-<arch>.tar.gz containing the three binaries
-#  plus the install scripts, so users can download and run:
-#      tar xzf cipherjet-*.tar.gz && sudo ./install/install-cups-printer.sh
+#  Builds on three targets — Linux x86_64, macOS Intel, macOS Apple Silicon —
+#  and publishes stable, version-independent asset names so the website can link
+#  to them permanently via /releases/latest/download/<asset>:
+#      cipherjet-linux-x86_64.tar.gz
+#      cipherjet-macos-x86_64.tar.gz   (Intel)
+#      cipherjet-macos-arm64.tar.gz    (Apple Silicon)
+#  Each tarball contains the three binaries, the install scripts, README + LICENSE.
 # =============================================================================
 name: Release
 
@@ -24,7 +28,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        # macos-13 = Intel, macos-14 = Apple Silicon, ubuntu-latest = Linux x86_64
+        os: [ ubuntu-latest, macos-13, macos-14 ]
     steps:
       - uses: actions/checkout@v4
 
@@ -47,17 +52,21 @@ jobs:
       - name: Package
         run: |
           VERSION="${GITHUB_REF_NAME}"
-          OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          case "$(uname -s)" in Darwin) OSL=macos;; Linux) OSL=linux;; *) OSL="$(uname -s)";; esac
           ARCH="$(uname -m)"
-          PKG="cipherjet-${VERSION}-${OS}-${ARCH}"
+          # Stable asset name (no version) so /releases/latest/download links never break.
+          ASSET="cipherjet-${OSL}-${ARCH}.tar.gz"
+          # Versioned folder inside the tarball for provenance.
+          PKG="cipherjet-${VERSION}-${OSL}-${ARCH}"
           mkdir -p "dist/$PKG/bin" "dist/$PKG/install"
           cp build/cipherjet build/cipherjet-release build/cipherjet-keygen "dist/$PKG/bin/"
           cp install/install-cups-printer.sh install/uninstall-cups-printer.sh "dist/$PKG/install/"
           cp README.md LICENSE "dist/$PKG/"
-          tar -C dist -czf "${PKG}.tar.gz" "$PKG"
-          echo "ASSET=${PKG}.tar.gz" >> "$GITHUB_ENV"
+          tar -C dist -czf "$ASSET" "$PKG"
+          echo "ASSET=$ASSET" >> "$GITHUB_ENV"
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.ASSET }}
+          generate_release_notes: true
