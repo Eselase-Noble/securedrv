@@ -290,6 +290,25 @@ metadata/identity hiding on the wire, since the job itself is already sealed.
 
 ---
 
+## Code signing (optional)
+
+Downloads are self-contained, but they are **unsigned**, so macOS Gatekeeper and
+Windows SmartScreen warn on first run. The release workflow will sign and
+(on macOS) notarize automatically once you add the matching repository secrets —
+no workflow changes needed. Until then the sign/notarize steps are skipped.
+
+| Platform | Secrets to add (Settings → Secrets → Actions) |
+|----------|-----------------------------------------------|
+| macOS sign | `MACOS_CERT_P12` (base64 of a Developer ID Application .p12), `MACOS_CERT_PASSWORD`, `MACOS_SIGN_IDENTITY` (e.g. `Developer ID Application: Your Name (TEAMID)`) |
+| macOS notarize | `AC_API_KEY_ID`, `AC_API_ISSUER_ID`, `AC_API_KEY_P8` (base64 of the App Store Connect API `.p8`) |
+| Windows | `WINDOWS_CERT_PFX` (base64 of an Authenticode .pfx), `WINDOWS_CERT_PASSWORD` |
+
+These require a paid Apple Developer account and a code-signing certificate from a
+CA. With them set, re-cut a release (`git tag vX.Y.Z && git push origin vX.Y.Z`)
+and the binaries download without security warnings — no `xattr`/SmartScreen step.
+
+---
+
 ## Architecture
 
 ```

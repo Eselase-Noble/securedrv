@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Release workflow can code-sign the binaries — macOS Developer ID signing +
+  notarization and Windows Authenticode — activated automatically when the
+  corresponding repository secrets are present (see README → Code signing).
+
 ## [1.1.1] — 2026-09-29
 
 ### Changed

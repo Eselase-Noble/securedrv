@@ -26,6 +26,16 @@ jobs:
   build:
     name: build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Signing turns on automatically once the matching secrets are configured;
+    # until then these are empty and the sign/notarize steps are skipped.
+    #   macOS:   MACOS_CERT_P12 (base64 .p12), MACOS_CERT_PASSWORD,
+    #            MACOS_SIGN_IDENTITY ("Developer ID Application: NAME (TEAMID)")
+    #            + notarization: AC_API_KEY_ID, AC_API_ISSUER_ID, AC_API_KEY_P8 (base64)
+    #   Windows: WINDOWS_CERT_PFX (base64 .pfx), WINDOWS_CERT_PASSWORD
+    env:
+      HAS_MACOS_CERT: ${{ secrets.MACOS_CERT_P12 != '' }}
+      HAS_MACOS_NOTARY: ${{ secrets.AC_API_KEY_P8 != '' }}
+      HAS_WIN_CERT: ${{ secrets.WINDOWS_CERT_PFX != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -69,6 +79,27 @@ jobs:
           cmake --build build -j
           ctest --test-dir build --output-on-failure
 
+      # Code-sign the macOS binaries with a Developer ID cert (skipped if no cert).
+      - name: Sign (macOS)
+        if: runner.os == 'macOS' && env.HAS_MACOS_CERT == 'true'
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+        run: |
+          echo "$MACOS_CERT_P12" | base64 --decode > cert.p12
+          KEYCHAIN="$RUNNER_TEMP/build.keychain"
+          security create-keychain -p ci "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          security unlock-keychain -p ci "$KEYCHAIN"
+          security import cert.p12 -k "$KEYCHAIN" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci "$KEYCHAIN"
+          for b in cipherjet cipherjet-release cipherjet-keygen cipherjet-send cipherjet-server; do
+            codesign --force --options runtime --timestamp \
+                     --sign "$MACOS_SIGN_IDENTITY" "build/$b"
+          done
+          rm -f cert.p12
+
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -78,6 +109,22 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
           cmake --build build --config Release -j
           ctest --test-dir build -C Release --output-on-failure
+
+      # Authenticode-sign the Windows .exe files (skipped if no cert).
+      - name: Sign (Windows)
+        if: runner.os == 'Windows' && env.HAS_WIN_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          [IO.File]::WriteAllBytes("cert.pfx", [Convert]::FromBase64String($env:WINDOWS_CERT_PFX))
+          $signtool = (Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/x64/signtool.exe" | Select-Object -Last 1).FullName
+          Get-ChildItem build/Release/cipherjet*.exe | ForEach-Object {
+            & $signtool sign /f cert.pfx /p $env:WINDOWS_CERT_PASSWORD `
+              /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $_.FullName
+          }
+          Remove-Item cert.pfx
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
@@ -94,6 +141,21 @@ jobs:
           cp README.md LICENSE "dist/$PKG/"
           tar -C dist -czf "$ASSET" "$PKG"
           echo "ASSET=$ASSET" >> "$GITHUB_ENV"
+
+      # Notarize the signed macOS binaries with Apple so Gatekeeper clears them on
+      # download (skipped unless notarization secrets are present).
+      - name: Notarize (macOS)
+        if: runner.os == 'macOS' && env.HAS_MACOS_CERT == 'true' && env.HAS_MACOS_NOTARY == 'true'
+        env:
+          AC_API_KEY_ID: ${{ secrets.AC_API_KEY_ID }}
+          AC_API_ISSUER_ID: ${{ secrets.AC_API_ISSUER_ID }}
+          AC_API_KEY_P8: ${{ secrets.AC_API_KEY_P8 }}
+        run: |
+          echo "$AC_API_KEY_P8" | base64 --decode > key.p8
+          ditto -c -k --keepParent dist notarize.zip
+          xcrun notarytool submit notarize.zip \
+            --key key.p8 --key-id "$AC_API_KEY_ID" --issuer "$AC_API_ISSUER_ID" --wait
+          rm -f key.p8 notarize.zip
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
