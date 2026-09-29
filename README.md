@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.1.0-5eead4">
+  <img alt="version" src="https://img.shields.io/badge/version-1.1.1-5eead4">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
   <img alt="platforms" src="https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-1e2838">
 </p>
@@ -64,8 +64,9 @@ make printer    # register the printer (sudo)   — or `make install` for binari
 **Prebuilt binaries:** download a build for your platform from the
 [Releases](https://github.com/Eselase-Noble/securedrv/releases) page (produced by
 CI) — Linux x86_64, macOS Intel & Apple Silicon (`.tar.gz`), and Windows x86_64
-(`.zip`, statically linked). On macOS/Linux, unpack and run
-`sudo ./install/install-cups-printer.sh`; the Windows build is a command-line tool.
+(`.zip`, statically linked). Every build is self-contained (static libsodium — nothing to install). On
+macOS/Linux, unpack and run `sudo ./install/install-cups-printer.sh`; the Windows
+build is a command-line tool.
 
 ---
 

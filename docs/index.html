@@ -70,6 +70,7 @@
     .link p{margin-left:auto;margin-right:auto}
     .dl{align-items:center}
     .dl-after,.dl-note{margin-left:auto;margin-right:auto}
+    ol.steps{margin-left:auto;margin-right:auto;text-align:left}
     /* Spec stays in two columns down to 680px, so keep it left there; it is
        centred once it collapses to a single column (below). */
     .spec dt,.spec dd{text-align:left}
@@ -189,6 +190,13 @@
   .dl-note{margin:14px 0 0;color:var(--ink-soft);font-size:.95rem}
   .dl-note code,.dl-after code{font-family:var(--mono)}
 
+  /* Getting-started steps */
+  .role{font-family:var(--sans);font-weight:700;font-size:1.15rem;margin:26px 0 10px}
+  ol.steps{margin:0 0 8px;padding-left:1.25em;max-width:66ch}
+  ol.steps li{margin:0 0 12px;line-height:1.55}
+  ol.steps code{font-family:var(--mono);font-size:.88em;background:var(--paper-2);
+    padding:1px 6px;border-radius:2px;white-space:nowrap}
+
   /* Footer */
   footer{background:var(--ink);color:var(--paper);border-bottom:none}
   footer .wrap{padding:44px 32px;display:flex;flex-wrap:wrap;gap:28px 24px;
@@ -228,6 +236,7 @@
     <a class="plain" href="#spec">Specification</a>
     <a class="plain" href="#custody">How it works</a>
     <a class="plain" href="#download">Download</a>
+    <a class="plain" href="#start">Get started</a>
     <a class="repo" href="https://github.com/Eselase-Noble/securedrv">View source</a>
   </nav>
 </div></header>
@@ -330,10 +339,41 @@
     <code><b>$</b> tar xzf cipherjet-*.tar.gz &amp;&amp; sudo ./install/install-cups-printer.sh</code>
     <button class="copy" data-copy="tar xzf cipherjet-*.tar.gz && sudo ./install/install-cups-printer.sh">Copy</button>
   </div>
-  <p class="dl-note">The Windows build is a statically linked command-line tool
-     (no DLLs to install); printer-queue registration is macOS/Linux for now. All
-     builds are also on the
+  <p class="dl-note">Every build is self-contained — <strong>no libsodium or other
+     dependencies to install</strong>, on any platform. Printer-queue registration
+     is macOS/Linux; the Windows build is command-line. All builds are also on the
      <a href="https://github.com/Eselase-Noble/securedrv/releases">releases page</a>.</p>
+</div></section>
+
+<section id="start"><div class="wrap sec-pad">
+  <h2>Getting started</h2>
+  <p class="sec-intro">Two roles: an <strong>admin</strong> runs the server where the
+     printer lives; everyone else is a <strong>client</strong> who prints to it from
+     any network. Every download is self-contained — nothing else to install.</p>
+
+  <p class="role">If you're a client</p>
+  <ol class="steps">
+    <li>Download the build for your system above and unzip it. On macOS, clear the
+        download quarantine once: <code>xattr -dr com.apple.quarantine .</code></li>
+    <li>Create your identity — it prints your client key:
+        <code>./cipherjet-keygen net-client</code>. Send that key to your admin.</li>
+    <li>Your admin authorises you and gives you the server's key, host and port.
+        Save them once in <code>~/.local/share/cipherjet/client.conf</code>:
+        <code>host = print.example.com</code>, <code>port = 9310</code>,
+        <code>server_key = &lt;server key&gt;</code>.</li>
+    <li>Print from anywhere: <code>./cipherjet-send report.pdf</code></li>
+  </ol>
+
+  <p class="role">If you're the admin (run the server)</p>
+  <ol class="steps">
+    <li>Install on the machine connected to the printer, then create the server key
+        and share the printed public key with clients:
+        <code>cipherjet-keygen net-server</code>.</li>
+    <li>Authorise each client key you receive:
+        <code>cipherjet-keygen net-allow &lt;client key&gt;</code>.</li>
+    <li>Run the server: <code>cipherjet-server --port 9310 --printer &lt;name&gt;</code>.
+        Open the port (or use a VPN/tunnel) so remote clients can reach it.</li>
+  </ol>
 </div></section>
 
 <section id="install"><div class="wrap sec-pad">
@@ -379,7 +419,7 @@
 <footer><div class="wrap">
   <div class="sig">
     <div class="name">Noble Eselase Vulley</div>
-    <div class="meta">Cipherjet, version 1.1.0. Released under the MIT License, 2026.</div>
+    <div class="meta">Cipherjet, version 1.1.1. Released under the MIT License, 2026.</div>
   </div>
   <div class="flinks">
     <a href="https://github.com/Eselase-Noble/securedrv">Source</a>

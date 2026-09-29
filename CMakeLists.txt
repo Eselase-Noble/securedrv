@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(Cipherjet
-    VERSION 1.1.0
+    VERSION 1.1.1
     DESCRIPTION "Cipherjet — enterprise encrypting printer driver using libsodium"
     LANGUAGES CXX)
 
@@ -56,35 +56,54 @@ endif()
 
 # ---- Dependencies -----------------------------------------------------------
 # libsodium provides all cryptographic primitives. Discovery is cross-platform:
+#   0) CIPHERJET_SODIUM_ROOT — an explicit prefix holding a *static* libsodium,
+#      used by the release builds to produce fully self-contained binaries
 #   1) pkg-config        (Homebrew on macOS, distro -dev packages on Linux)
 #   2) unofficial-sodium CONFIG package (how vcpkg exposes it on Windows)
 #   3) a manual find as a last resort
-# The result is normalised to one link target: securedrv::sodium.
+# The result is normalised to one link target: securedrv_sodium.
 add_library(securedrv_sodium INTERFACE)
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(SODIUM QUIET IMPORTED_TARGET libsodium)
-endif()
-if(TARGET PkgConfig::SODIUM)
-    target_link_libraries(securedrv_sodium INTERFACE PkgConfig::SODIUM)
+if(CIPHERJET_SODIUM_ROOT)
+    message(STATUS "Using static libsodium from ${CIPHERJET_SODIUM_ROOT}")
+    find_library(SODIUM_STATIC_LIB NAMES sodium libsodium
+                 PATHS "${CIPHERJET_SODIUM_ROOT}/lib" NO_DEFAULT_PATH)
+    if(NOT SODIUM_STATIC_LIB)
+        message(FATAL_ERROR "CIPHERJET_SODIUM_ROOT set but no libsodium found under it")
+    endif()
+    target_include_directories(securedrv_sodium INTERFACE "${CIPHERJET_SODIUM_ROOT}/include")
+    target_link_libraries(securedrv_sodium INTERFACE "${SODIUM_STATIC_LIB}")
 else()
-    find_package(unofficial-sodium CONFIG QUIET)
-    if(TARGET unofficial-sodium::sodium)
-        target_link_libraries(securedrv_sodium INTERFACE unofficial-sodium::sodium)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(SODIUM QUIET IMPORTED_TARGET libsodium)
+    endif()
+    if(TARGET PkgConfig::SODIUM)
+        target_link_libraries(securedrv_sodium INTERFACE PkgConfig::SODIUM)
     else()
-        find_path(SODIUM_INCLUDE_DIR sodium.h)
-        find_library(SODIUM_LIBRARY NAMES sodium libsodium)
-        if(NOT SODIUM_INCLUDE_DIR OR NOT SODIUM_LIBRARY)
-            message(FATAL_ERROR "libsodium not found (install libsodium-dev / brew libsodium / vcpkg libsodium)")
+        find_package(unofficial-sodium CONFIG QUIET)
+        if(TARGET unofficial-sodium::sodium)
+            target_link_libraries(securedrv_sodium INTERFACE unofficial-sodium::sodium)
+        else()
+            find_path(SODIUM_INCLUDE_DIR sodium.h)
+            find_library(SODIUM_LIBRARY NAMES sodium libsodium)
+            if(NOT SODIUM_INCLUDE_DIR OR NOT SODIUM_LIBRARY)
+                message(FATAL_ERROR "libsodium not found (install libsodium-dev / brew libsodium / vcpkg libsodium)")
+            endif()
+            target_include_directories(securedrv_sodium INTERFACE "${SODIUM_INCLUDE_DIR}")
+            target_link_libraries(securedrv_sodium INTERFACE "${SODIUM_LIBRARY}")
         endif()
-        target_include_directories(securedrv_sodium INTERFACE "${SODIUM_INCLUDE_DIR}")
-        target_link_libraries(securedrv_sodium INTERFACE "${SODIUM_LIBRARY}")
     endif()
 endif()
 # When libsodium is linked statically on Windows (vcpkg *-static triplets),
 # consumers must define SODIUM_STATIC so headers don't use __declspec(dllimport).
 if(WIN32)
     target_compile_definitions(securedrv_sodium INTERFACE SODIUM_STATIC)
+endif()
+# On Linux, also fold in the C++ runtime so a downloaded binary doesn't depend on
+# a matching libstdc++/libgcc being present. (macOS ships libc++; Windows is
+# handled by the static vcpkg triplet.)
+if(UNIX AND NOT APPLE)
+    add_link_options(-static-libgcc -static-libstdc++)
 endif()
 
 # =============================================================================

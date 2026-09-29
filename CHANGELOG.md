@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-09-29
+
+### Changed
+- Release binaries are now **self-contained on every platform**: libsodium is
+  linked statically (built from source for Linux/macOS; static vcpkg triplet on
+  Windows), and the Linux build also folds in libstdc++/libgcc. Downloaded
+  binaries run with no dependencies to install.
+
+### Added
+- `cipherjet-send` reads defaults from `<data-dir>/client.conf`
+  (`host` / `port` / `server_key`), so routine use is just
+  `cipherjet-send <file>`. A `CIPHERJET_SODIUM_ROOT` CMake option selects a
+  static libsodium for self-contained builds.
+
 ## [1.1.0] — 2026-09-29
 
 ### Added
@@ -62,7 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project website (`docs/`).
 - Dependency-free unit test suite (58 checks).
 
-[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Eselase-Noble/securedrv/releases/tag/v1.0.0

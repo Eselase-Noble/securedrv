@@ -34,25 +34,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies (Linux)
+      - name: Install build tools (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libsodium-dev cmake pkg-config g++
+          sudo apt-get install -y cmake g++ make curl
 
-      - name: Install dependencies (macOS)
+      - name: Install build tools (macOS)
         if: runner.os == 'macOS'
-        run: brew install libsodium cmake pkg-config
+        run: brew install cmake
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         run: vcpkg install libsodium:x64-windows-static-md
         shell: pwsh
 
+      # Build a STATIC libsodium from source so the released Unix binaries carry
+      # no runtime dependency on a system libsodium.
+      - name: Build static libsodium (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          curl -fsSL -o libsodium.tar.gz \
+            https://download.libsodium.org/libsodium/releases/libsodium-1.0.20-stable.tar.gz
+          tar xzf libsodium.tar.gz
+          cd libsodium-stable
+          ./configure --enable-static --disable-shared --prefix="$HOME/sodium"
+          make -j
+          make install
+
       - name: Build (Unix)
         if: runner.os != 'Windows'
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCIPHERJET_SODIUM_ROOT="$HOME/sodium"
           cmake --build build -j
           ctest --test-dir build --output-on-failure
 

@@ -73,21 +73,51 @@ int main(int argc, char** argv) try {
 
     std::string host, server_key_hex, server_key_file, title, input_file;
     std::uint16_t port = 9310;
+    bool port_from_cli = false;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--version") { std::cout << "cipherjet-send " CIPHERJET_VERSION "\n"; return 0; }
         else if (a == "--help") { usage(); return 0; }
         else if (a == "--host" && i + 1 < argc) host = argv[++i];
-        else if (a == "--port" && i + 1 < argc) port = static_cast<std::uint16_t>(std::stoi(argv[++i]));
+        else if (a == "--port" && i + 1 < argc) { port = static_cast<std::uint16_t>(std::stoi(argv[++i])); port_from_cli = true; }
         else if (a == "--server-key" && i + 1 < argc) server_key_hex = argv[++i];
         else if (a == "--server-key-file" && i + 1 < argc) server_key_file = argv[++i];
         else if (a == "--title" && i + 1 < argc) title = argv[++i];
         else if (!a.empty() && a[0] != '-') input_file = a;
         else { usage(); return 2; }
     }
-    if (host.empty()) { std::cerr << "cipherjet-send: --host is required\n"; return 2; }
 
     Config cfg = Config::load();
+
+    // Fill any unset options from an optional client.conf in the data directory,
+    // so once it's set up a client can simply run:  cipherjet-send report.pdf
+    //     host = print.example.com
+    //     port = 9310
+    //     server_key = <64-hex server public key>
+    {
+        std::ifstream cf(platform::path_join(cfg.data_dir, "client.conf"));
+        std::string line;
+        auto trim = [](std::string& s) {
+            std::size_t b = s.find_first_not_of(" \t\r\n");
+            std::size_t e = s.find_last_not_of(" \t\r\n");
+            s = (b == std::string::npos) ? "" : s.substr(b, e - b + 1);
+        };
+        while (std::getline(cf, line)) {
+            if (line.empty() || line[0] == '#') continue;
+            auto eq = line.find('=');
+            if (eq == std::string::npos) continue;
+            std::string k = line.substr(0, eq), v = line.substr(eq + 1);
+            trim(k); trim(v);
+            if (k == "host" && host.empty()) host = v;
+            else if (k == "port" && !port_from_cli) port = static_cast<std::uint16_t>(std::stoi(v));
+            else if (k == "server_key" && server_key_hex.empty() && server_key_file.empty()) server_key_hex = v;
+        }
+    }
+    if (host.empty()) {
+        std::cerr << "cipherjet-send: no server host — pass --host or set 'host=' in "
+                  << platform::path_join(cfg.data_dir, "client.conf") << "\n";
+        return 2;
+    }
 
     // Resolve the server's public key: explicit hex, a file, or the local
     // server_box.pub (handy when testing client and server on one machine).
