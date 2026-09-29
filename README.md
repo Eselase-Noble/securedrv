@@ -44,7 +44,7 @@ end users just press **⌘P / Ctrl-P** and pick *Cipherjet (Encrypted)*.
 **One command** (fetches, builds, installs, and registers the printer):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/production/install.sh | bash
 ```
 
 It installs the build dependencies for your OS (Homebrew / apt / dnf / pacman /

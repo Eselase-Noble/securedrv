@@ -13,7 +13,7 @@ ctest --test-dir build --output-on-failure
 
 ## Workflow
 
-1. Branch off `main`.
+1. Branch off `production`.
 2. Make your change, keeping the surrounding code style and comment density.
 3. Run the tests (`ctest --test-dir build`). Add tests for new behaviour.
 4. Open a pull request. The template will prompt you for a summary and checklist.

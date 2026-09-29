@@ -8,7 +8,7 @@
 #      ./install.sh --uninstall     remove Cipherjet
 #
 #  Usage (remote, no clone needed):
-#      curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/main/install.sh | bash
+#      curl -fsSL https://raw.githubusercontent.com/Eselase-Noble/securedrv/production/install.sh | bash
 #
 #  It will:
 #    1. Ensure build dependencies (libsodium, cmake, pkg-config, a C++ compiler)
