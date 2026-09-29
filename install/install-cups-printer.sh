@@ -127,9 +127,12 @@ EOF
 chmod 0755 "$BIN_DIR/cipherjet-admin"
 
 echo "==> Creating the CUPS print queue '$QUEUE_NAME'"
-lpadmin -p "$QUEUE_NAME" -E -v "cipherjet:/secure-spool" \
-        -D "Cipherjet (Encrypted)" -L "Secure encrypted spool" -m raw \
-  || lpadmin -p "$QUEUE_NAME" -E -v "cipherjet:/secure-spool" \
+# Modern macOS removed "raw" queues, so use a minimal pass-through PPD: it hands
+# the job (PDF/PostScript) straight to the cipherjet backend, which encrypts it.
+PPD="$SCRIPT_DIR/cipherjet.ppd"
+[ -f "$PPD" ] || { echo "missing PPD: $PPD" >&2; exit 1; }
+lpadmin -x "$QUEUE_NAME" 2>/dev/null || true   # clear any half-created queue
+lpadmin -p "$QUEUE_NAME" -E -v "cipherjet:/secure-spool" -P "$PPD" \
         -D "Cipherjet (Encrypted)" -L "Secure encrypted spool"
 cupsenable "$QUEUE_NAME" || true
 cupsaccept "$QUEUE_NAME" || true

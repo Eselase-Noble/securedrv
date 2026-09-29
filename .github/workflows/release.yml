@@ -137,7 +137,8 @@ jobs:
           mkdir -p "dist/$PKG/bin" "dist/$PKG/install"
           cp build/cipherjet build/cipherjet-release build/cipherjet-keygen \
              build/cipherjet-send build/cipherjet-server "dist/$PKG/bin/"
-          cp install/install-cups-printer.sh install/uninstall-cups-printer.sh "dist/$PKG/install/"
+          cp install/install-cups-printer.sh install/uninstall-cups-printer.sh \
+             install/cipherjet.ppd "dist/$PKG/install/"
           cp README.md LICENSE "dist/$PKG/"
           tar -C dist -czf "$ASSET" "$PKG"
           echo "ASSET=$ASSET" >> "$GITHUB_ENV"

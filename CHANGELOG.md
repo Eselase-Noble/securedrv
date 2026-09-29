@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] — 2026-09-29
+
+### Fixed
+- macOS ⌘P printer really works now: recent macOS removed "raw" print queues, so
+  the installer creates the "Cipherjet (Encrypted)" queue with a minimal
+  pass-through PPD (`install/cipherjet.ppd`) that hands PDF/PostScript straight to
+  the backend to encrypt. (v1.2.1 still tried a raw queue and failed to install it.)
+
 ## [1.2.1] — 2026-09-29
 
 ### Fixed
@@ -106,7 +114,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project website (`docs/`).
 - Dependency-free unit test suite (58 checks).
 
-[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.0...v1.1.1
