@@ -45,7 +45,13 @@
   .nav a{color:var(--ink)}
   .nav a.repo{border:1.5px solid var(--ink);padding:7px 14px;border-radius:2px;font-weight:600}
   .nav a.repo:hover{background:var(--ink);color:var(--paper);text-decoration:none}
-  @media(max-width:760px){.nav a.plain{display:none}}
+  /* On narrow screens, stack the header so every nav link stays visible
+     (wrapping into a row beneath the wordmark) instead of being hidden. */
+  @media(max-width:760px){
+    .mast .wrap{flex-direction:column;height:auto;align-items:flex-start;
+      gap:12px;padding-top:14px;padding-bottom:14px}
+    .nav{margin-left:0;width:100%;flex-wrap:wrap;gap:14px 18px;font-size:.92rem}
+  }
 
   /* ---- Hero ---- */
   .hero{border-bottom:1px solid var(--rule)}

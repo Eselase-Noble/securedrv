@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(Cipherjet
-    VERSION 1.0.0
+    VERSION 1.0.1
     DESCRIPTION "Cipherjet — enterprise encrypting printer driver using libsodium"
     LANGUAGES CXX)
 
