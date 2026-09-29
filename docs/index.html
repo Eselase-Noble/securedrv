@@ -45,12 +45,39 @@
   .nav a{color:var(--ink)}
   .nav a.repo{border:1.5px solid var(--ink);padding:7px 14px;border-radius:2px;font-weight:600}
   .nav a.repo:hover{background:var(--ink);color:var(--paper);text-decoration:none}
-  /* On narrow screens, stack the header so every nav link stays visible
-     (wrapping into a row beneath the wordmark) instead of being hidden. */
+  /* On narrow screens, stack the header (so every nav link stays visible) and
+     centre the wordmark + links. */
   @media(max-width:760px){
-    .mast .wrap{flex-direction:column;height:auto;align-items:flex-start;
+    .mast .wrap{flex-direction:column;height:auto;align-items:center;
       gap:12px;padding-top:14px;padding-bottom:14px}
-    .nav{margin-left:0;width:100%;flex-wrap:wrap;gap:14px 18px;font-size:.92rem}
+    .nav{margin-left:0;width:100%;flex-wrap:wrap;justify-content:center;
+      gap:14px 18px;font-size:.92rem}
+  }
+
+  /* Centre the page content on mobile (desktop stays left-aligned by design).
+     Code/command text inside terminal boxes stays left-aligned for readability;
+     only the box itself is centred. */
+  @media(max-width:760px){
+    .hero .wrap{text-align:center}
+    .hero .headline,.hero .deck,.hero .kicker{margin-left:auto;margin-right:auto}
+    .actions{justify-content:center}
+    .sec-pad{text-align:center}
+    .sec-intro{margin-left:auto;margin-right:auto}
+    .term{margin-left:auto;margin-right:auto}
+    .term code{text-align:left}
+    .link .stage{justify-content:center}
+    .link p{margin-left:auto;margin-right:auto}
+    .dl{align-items:center}
+    .dl-after,.dl-note{margin-left:auto;margin-right:auto}
+    /* Spec stays in two columns down to 680px, so keep it left there; it is
+       centred once it collapses to a single column (below). */
+    .spec dt,.spec dd{text-align:left}
+    footer .wrap{text-align:center}
+    footer .sig{width:100%}
+    .flinks{justify-content:center;width:100%}
+  }
+  @media(max-width:680px){
+    .spec dt,.spec dd{text-align:center}
   }
 
   /* ---- Hero ---- */
