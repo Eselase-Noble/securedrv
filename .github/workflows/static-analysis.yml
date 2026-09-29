@@ -1,0 +1,36 @@
+# =============================================================================
+#  Static analysis — cppcheck on every push and pull request.
+#  Two tiers: genuine bugs (cppcheck "error" severity) fail the check; broader
+#  warning/performance/portability findings are reported for review but do not
+#  block, to avoid false positives gating legitimate changes.
+# =============================================================================
+name: Static analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cppcheck
+
+      - name: Advisory review (warnings, performance, portability)
+        run: |
+          cppcheck --enable=warning,performance,portability --std=c++17 --language=c++ \
+            --suppress=missingIncludeSystem --inline-suppr --quiet \
+            -I include src tools tests || true
+
+      - name: Gate on genuine bugs (error severity)
+        run: |
+          cppcheck --std=c++17 --language=c++ --suppress=missingIncludeSystem \
+            --inline-suppr --error-exitcode=1 --quiet \
+            -I include src tools tests
