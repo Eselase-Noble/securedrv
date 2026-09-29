@@ -230,17 +230,20 @@ static void test_audit_log(const std::string& home) {
         CHECK(log.verify(nullptr));
     }
 
-    // Corrupt the middle line and confirm verification fails there.
+    // Corrupt the middle line and confirm verification fails there. Read and
+    // rewrite in binary so we don't perturb line endings — the log is stored
+    // with '\n' terminators, and on Windows a text-mode rewrite would turn every
+    // '\n' into "\r\n", corrupting line 1 instead of just the line we target.
     std::vector<std::string> lines;
     {
-        std::ifstream f(log_path);
+        std::ifstream f(log_path, std::ios::binary);
         std::string l;
         while (std::getline(f, l)) lines.push_back(l);
     }
     CHECK(lines.size() == 3);
     if (lines.size() == 3) {
         lines[1] += "x";  // mutate the payload of line 2
-        std::ofstream f(log_path, std::ios::trunc);
+        std::ofstream f(log_path, std::ios::trunc | std::ios::binary);
         for (auto& l : lines) f << l << "\n";
     }
     AuditLog log2(log_path);
