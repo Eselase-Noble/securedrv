@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "securedrv/config.hpp"
+#include "securedrv/discovery.hpp"
 #include "securedrv/errors.hpp"
 #include "securedrv/net_crypto.hpp"
 #include "securedrv/net_keys.hpp"
@@ -38,23 +39,27 @@ using namespace securedrv;
 namespace {
 
 constexpr std::uint8_t kHello[4] = {'C', 'J', 'N', 'P'};
-constexpr std::uint8_t kProtoVersion = 1;
+constexpr std::uint8_t kProtoVersion = 2;
+constexpr std::uint8_t kAuthAnon   = 0x00;
+constexpr std::uint8_t kAuthSigned = 0x01;
 constexpr const char*  kAuthDomain = "cipherjet-auth-v1";
 
 void usage() {
     std::cerr <<
         "cipherjet-send — send an encrypted print job to a Cipherjet server\n"
         "Usage:\n"
+        "  cipherjet-send [FILE]                       (same network: auto-discovers)\n"
         "  cipherjet-send --host HOST [--port N] \\\n"
-        "                 (--server-key HEX | --server-key-file PATH) \\\n"
-        "                 [--title TITLE] [FILE]\n\n"
-        "  --host HOST            server hostname or IP (reachable from here)\n"
-        "  --port N              server port (default 9310)\n"
-        "  --server-key HEX      server public key (64 hex chars)\n"
+        "                 (--server-key HEX | --server-key-file PATH) [FILE]\n\n"
+        "  (no --host)           find a printer on the local network and print with\n"
+        "                        no setup (still encrypted to the discovered key)\n"
+        "  --host HOST           a remote server's hostname or IP\n"
+        "  --port N             server port (default 9310)\n"
+        "  --server-key HEX      remote server's public key (64 hex chars)\n"
         "  --server-key-file P   file containing the server public key hex\n"
         "  --title TITLE         job title (default: file name or 'print-job')\n"
         "  FILE                  job to send (default: stdin)\n\n"
-        "The client identity lives in CIPHERJET_HOME "
+        "For a remote server the client identity lives in CIPHERJET_HOME "
         "('cipherjet-keygen net-client').\n";
 }
 
@@ -113,35 +118,54 @@ int main(int argc, char** argv) try {
             else if (k == "server_key" && server_key_hex.empty() && server_key_file.empty()) server_key_hex = v;
         }
     }
-    if (host.empty()) {
-        std::cerr << "cipherjet-send: no server host — pass --host or set 'host=' in "
-                  << platform::path_join(cfg.data_dir, "client.conf") << "\n";
-        return 2;
-    }
-
-    // Resolve the server's public key: explicit hex, a file, or the local
-    // server_box.pub (handy when testing client and server on one machine).
+    // Decide how we reach the server:
+    //   * no host configured  -> discover one on the LAN and print anonymously
+    //     (zero setup, still encrypted to the server's discovered key);
+    //   * host configured      -> a remote server: authenticate with our identity
+    //     and seal to its pinned key.
     net::PublicKey server_pk{};
-    if (!server_key_hex.empty()) {
-        server_pk = net::parse_pubkey_hex(server_key_hex);
-    } else if (!server_key_file.empty()) {
-        server_pk = net::parse_pubkey_hex(read_file_text(server_key_file));
-    } else {
-        std::string local = platform::path_join(cfg.data_dir, "server_box.pub");
-        if (std::ifstream(local).good()) {
-            server_pk = net::parse_pubkey_hex(read_file_text(local));
-        } else {
-            std::cerr << "cipherjet-send: provide --server-key or --server-key-file\n";
+    bool anonymous = false;
+
+    if (host.empty()) {
+        std::cerr << "cipherjet-send: looking for a printer on the local network...\n";
+        auto found = net::discover_server(port, 1200);
+        if (!found) {
+            std::cerr << "cipherjet-send: none found on the LAN. For a remote server, "
+                         "pass --host (with --server-key), or set them in "
+                      << platform::path_join(cfg.data_dir, "client.conf") << "\n";
             return 2;
+        }
+        host = found->ip;
+        port = found->tcp_port;
+        server_pk = found->pk;
+        anonymous = true;
+        std::cerr << "cipherjet-send: found printer at " << host << ":" << port << "\n";
+    } else {
+        if (!server_key_hex.empty()) {
+            server_pk = net::parse_pubkey_hex(server_key_hex);
+        } else if (!server_key_file.empty()) {
+            server_pk = net::parse_pubkey_hex(read_file_text(server_key_file));
+        } else {
+            std::string local = platform::path_join(cfg.data_dir, "server_box.pub");
+            if (std::ifstream(local).good()) {
+                server_pk = net::parse_pubkey_hex(read_file_text(local));
+            } else {
+                std::cerr << "cipherjet-send: provide --server-key or --server-key-file for a remote server\n";
+                return 2;
+            }
         }
     }
 
+    // A remote (authenticated) send needs our identity key; a discovered LAN send
+    // does not.
     net::ClientIdentity id;
-    try {
-        id = net::load_client_identity(cfg.data_dir);
-    } catch (const Error&) {
-        std::cerr << "cipherjet-send: no client identity — run 'cipherjet-keygen net-client' first.\n";
-        return 2;
+    if (!anonymous) {
+        try {
+            id = net::load_client_identity(cfg.data_dir);
+        } catch (const Error&) {
+            std::cerr << "cipherjet-send: no client identity — run 'cipherjet-keygen net-client' first.\n";
+            return 2;
+        }
     }
 
     // Choose the input source and a title.
@@ -158,31 +182,36 @@ int main(int argc, char** argv) try {
     }
     if (title.empty()) title = "print-job";
 
-    // Connect and run the handshake.
+    // Connect and run the handshake (protocol v2: hello = magic|ver|flags|challenge).
     net::Conn conn = net::Conn::connect(host, port);
-
-    std::uint8_t hello[5 + net::kContextBytes];
+    std::uint8_t hello[6 + net::kContextBytes];
     conn.recv_exact(hello, sizeof(hello));
     if (std::memcmp(hello, kHello, 4) != 0 || hello[4] != kProtoVersion) {
         std::cerr << "cipherjet-send: unexpected server handshake\n";
         return 1;
     }
-    const std::uint8_t* challenge = hello + 5;
+    const std::uint8_t* challenge = hello + 6;
 
-    // Sign the challenge with our identity key to authenticate.
-    std::vector<std::uint8_t> signed_msg(kAuthDomain, kAuthDomain + std::strlen(kAuthDomain));
-    signed_msg.insert(signed_msg.end(), challenge, challenge + net::kContextBytes);
-    std::uint8_t sig[crypto_sign_BYTES];
-    crypto_sign_detached(sig, nullptr, signed_msg.data(), signed_msg.size(), id.sk.data());
-
-    conn.send_all(id.pk.data(), id.pk.size());
-    conn.send_all(sig, sizeof(sig));
+    if (anonymous) {
+        std::uint8_t mode = kAuthAnon;
+        conn.send_all(&mode, 1);
+    } else {
+        std::uint8_t mode = kAuthSigned;
+        conn.send_all(&mode, 1);
+        std::vector<std::uint8_t> signed_msg(kAuthDomain, kAuthDomain + std::strlen(kAuthDomain));
+        signed_msg.insert(signed_msg.end(), challenge, challenge + net::kContextBytes);
+        std::uint8_t sig[crypto_sign_BYTES];
+        crypto_sign_detached(sig, nullptr, signed_msg.data(), signed_msg.size(), id.sk.data());
+        conn.send_all(id.pk.data(), id.pk.size());
+        conn.send_all(sig, sizeof(sig));
+    }
 
     std::uint8_t status = 0;
     conn.recv_exact(&status, 1);
     if (status != 1) {
-        std::cerr << "cipherjet-send: server rejected this client "
-                     "(is our key in the server's authorized_clients?)\n";
+        std::cerr << "cipherjet-send: server rejected the job"
+                  << (anonymous ? " (LAN printing may be disabled on the server)."
+                                : " (is our key authorised on the server?).") << "\n";
         return 1;
     }
 

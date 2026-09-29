@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.1.1-5eead4">
+  <img alt="version" src="https://img.shields.io/badge/version-1.2.0-5eead4">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
   <img alt="platforms" src="https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-1e2838">
 </p>
@@ -225,9 +225,24 @@ Default data directory:
 
 ## Secure networked printing
 
-Clients can print to a printer on a **different network** — home, mobile, another
-office, across the internet. The printer stays with the server; clients just
-reach the server's address.
+Two modes, chosen automatically:
+
+**Same network — zero setup.** Run `cipherjet-server` where the printer is, then
+on any machine on that network:
+
+```bash
+cipherjet-send report.pdf
+```
+
+The client discovers the server on the LAN, fetches its key, and prints. No key
+exchange, no allowlist. The job is still encrypted in transit (sealed to the
+server's key); the server auto-trusts clients on the local network, the same
+trust model as an ordinary shared network printer. (`--require-auth` on the
+server turns this off; `--no-discovery` stops advertising.)
+
+**Different network — fully secured.** Clients can also print to a printer on a
+**different network** (home, mobile, another office, across the internet). The
+printer stays with the server; clients just reach the server's address.
 
 ```
  client (any network)                              print server (with the printer)

@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(Cipherjet
-    VERSION 1.1.1
+    VERSION 1.2.0
     DESCRIPTION "Cipherjet — enterprise encrypting printer driver using libsodium"
     LANGUAGES CXX)
 
@@ -121,6 +121,7 @@ add_library(securedrv_core STATIC
     src/net_keys.cpp
     src/net_crypto.cpp
     src/socket.cpp
+    src/discovery.cpp
 )
 
 target_include_directories(securedrv_core
@@ -132,6 +133,10 @@ target_link_libraries(securedrv_core PUBLIC securedrv_sodium)
 if(WIN32)
     target_link_libraries(securedrv_core PUBLIC ws2_32)
 endif()
+
+# The server runs its LAN-discovery responder on a background thread.
+find_package(Threads REQUIRED)
+target_link_libraries(securedrv_core PUBLIC Threads::Threads)
 
 # Propagate the project version into the code as CIPHERJET_VERSION so every
 # executable can answer `--version`. Single source of truth: project(... VERSION).

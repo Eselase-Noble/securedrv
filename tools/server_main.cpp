@@ -152,7 +152,6 @@ bool handle_client(net::Conn& conn, const std::string& peer, bool lan_open,
     std::uint8_t done = 1;
     conn.send_all(&done, 1);
 
-    std::string cid = util::to_hex(client_pk, sizeof(client_pk));
     audit.record("net-release", meta.id_hex(),
                  "client=" + cid.substr(0, 16) + " peer=" + peer +
                  " title=\"" + meta.title + "\" bytes=" +
@@ -170,6 +169,8 @@ int main(int argc, char** argv) try {
 
     std::uint16_t port = kDefaultPort;
     std::string exec_cmd = "lp";
+    bool lan_open = true;      // LAN clients need no key exchange by default
+    bool discovery = true;     // advertise on the LAN by default
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--version") { std::cout << "cipherjet-server " CIPHERJET_VERSION "\n"; return 0; }
@@ -177,6 +178,8 @@ int main(int argc, char** argv) try {
         else if (a == "--port" && i + 1 < argc) port = static_cast<std::uint16_t>(std::stoi(argv[++i]));
         else if (a == "--printer" && i + 1 < argc) exec_cmd = "lp -d " + std::string(argv[++i]);
         else if (a == "--exec" && i + 1 < argc) exec_cmd = argv[++i];
+        else if (a == "--require-auth") lan_open = false;
+        else if (a == "--no-discovery") discovery = false;
         else { usage(); return 2; }
     }
 
@@ -189,16 +192,29 @@ int main(int argc, char** argv) try {
         return 2;
     }
     auto allow = net::load_authorized_clients(cfg.data_dir);
-    if (allow.empty()) {
-        std::cerr << "cipherjet-server: warning — no authorised clients; every "
-                     "connection will be rejected. Add client keys to "
-                  << cfg.data_dir << "/authorized_clients\n";
+    if (!lan_open && allow.empty()) {
+        std::cerr << "cipherjet-server: warning — --require-auth is set but there are "
+                     "no authorised clients; every connection will be rejected. Add "
+                     "client keys with 'cipherjet-keygen net-allow <key>'.\n";
     }
 
     AuditLog audit(cfg.audit_path);
+
+    // Advertise on the local network so same-network clients need no setup.
+    std::atomic<bool> stop_discovery{false};
+    std::thread discovery_thread;
+    if (discovery) {
+        discovery_thread = std::thread(net::run_discovery_responder, port, port,
+                                       server.pk, &stop_discovery);
+        discovery_thread.detach();
+    }
+
     net::Listener listener(port);
     std::cerr << "cipherjet-server " CIPHERJET_VERSION " listening on port " << port
-              << ", releasing via: " << exec_cmd << "\n";
+              << (discovery ? " (discoverable on the LAN)" : "")
+              << ", releasing via: " << exec_cmd << "\n"
+              << "  LAN clients: " << (lan_open ? "no setup required" : "must be authorised")
+              << "\n";
 
     // Single-threaded accept loop: one job at a time. A failing client is logged
     // and skipped without bringing the server down.
@@ -206,7 +222,7 @@ int main(int argc, char** argv) try {
         std::string peer;
         net::Conn conn = listener.accept(&peer);
         try {
-            handle_client(conn, peer, server, allow, exec_cmd, audit);
+            handle_client(conn, peer, lan_open, server, allow, exec_cmd, audit);
         } catch (const std::exception& e) {
             std::cerr << "cipherjet-server: connection from " << peer
                       << " failed: " << e.what() << "\n";

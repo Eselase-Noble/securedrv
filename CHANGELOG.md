@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-09-29
+
 ### Added
+- **Zero-setup printing on the same network.** `cipherjet-send` with no `--host`
+  now discovers a `cipherjet-server` on the LAN automatically, fetches its key,
+  and prints with no key exchange and no allowlist. The job is still encrypted in
+  transit (sealed to the discovered key); the server auto-trusts clients on the
+  local network. Printing to a server on another network keeps the full secured
+  flow (pinned key + Ed25519 client auth + allowlist).
+- Server advertises itself over UDP on the LAN; `--no-discovery` disables it and
+  `--require-auth` turns off LAN auto-trust (require an authorised key everywhere).
+- Wire protocol v2: a flags byte plus optional anonymous (LAN) or signed (remote)
+  authentication.
+
+### Added (build)
 - Release workflow can code-sign the binaries — macOS Developer ID signing +
   notarization and Windows Authenticode — activated automatically when the
   corresponding repository secrets are present (see README → Code signing).
@@ -81,7 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project website (`docs/`).
 - Dependency-free unit test suite (58 checks).
 
-[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.0...v1.0.1
