@@ -23,8 +23,6 @@ ctest --test-dir build --output-on-failure
 - **CI** builds and tests on Linux, macOS and Windows.
 - **Static analysis** (cppcheck) flags bugs and code smells.
 - **CodeQL** performs a security code review; results appear in the Security tab.
-- **Claude code review** posts inline review comments (active when the
-  `ANTHROPIC_API_KEY` secret is configured).
 - **Dependabot** opens PRs to keep GitHub Actions up to date.
 
 ## Reporting issues
