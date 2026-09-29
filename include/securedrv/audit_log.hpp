@@ -1,4 +1,4 @@
-// =============================================================================
+   // =============================================================================
 //  audit_log.hpp — Append-only, tamper-evident operations log.
 //
 //  Enterprise deployments must be able to prove *what happened*: which jobs were
