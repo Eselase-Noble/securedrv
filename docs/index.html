@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cipherjet — encrypted printing</title>
+<title>Cipherjet: encrypted printing</title>
 <meta name="description" content="Cipherjet is a printer driver that seals every job in authenticated encryption the moment it leaves the application. Built in C++ on libsodium.">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -246,7 +246,7 @@
     <p class="kicker">Secure printing for people who handle confidential documents</p>
     <h1 class="headline">Encrypted before it reaches the tray.</h1>
     <p class="deck">Cipherjet seals every print job in authenticated encryption the
-       moment it leaves the application. What waits in the spool is ciphertext — and
+       moment it leaves the application. What waits in the spool is ciphertext, and
        it becomes a document again only in <em>authorized</em> hands.</p>
     <div class="actions">
       <a class="btn solid" href="#download">Download Cipherjet</a>
@@ -264,7 +264,7 @@
       <div class="strip">PRINT JOB 4a2f…e19<span>received 14:22</span></div>
       <div class="body">
         <p class="lbl">As sent by the application</p>
-        <p class="plain">Q3 Board Minutes — final.pdf</p>
+        <p class="plain">Q3 Board Minutes (final).pdf</p>
         <p class="seal-flow">↓ sealed with a per-job key</p>
         <p class="lbl">As stored in the spool</p>
         <p class="cipher">9f3a1c8b 77e2d410 a6b0ff29 4c81e7aa
@@ -280,8 +280,8 @@
 
 <section id="spec"><div class="wrap sec-pad">
   <h2>Specification</h2>
-  <p class="sec-intro">Modern, hard-to-misuse cryptography from libsodium — no
-     invented primitives, nothing you have to configure to be safe.</p>
+  <p class="sec-intro">Modern, hard-to-misuse cryptography from libsodium. No
+     invented primitives, and nothing you have to configure to be safe.</p>
   <dl class="spec">
     <dt>Cipher</dt>
     <dd>XChaCha20-Poly1305, applied to the job stream in authenticated 64&nbsp;KiB chunks, so any bit flipped or byte removed is caught before a page ever prints.</dd>
@@ -315,7 +315,7 @@
     </div>
     <div class="link">
       <p class="stage"><b>Release</b></p>
-      <p>An authorized operator opens the job and sends it on to the physical printer — the only point it is readable.</p>
+      <p>An authorized operator opens the job and sends it on to the physical printer. That is the only point at which it is readable.</p>
     </div>
   </div>
 </div></section>
@@ -339,9 +339,9 @@
     <code><b>$</b> tar xzf cipherjet-*.tar.gz &amp;&amp; sudo ./install/install-cups-printer.sh</code>
     <button class="copy" data-copy="tar xzf cipherjet-*.tar.gz && sudo ./install/install-cups-printer.sh">Copy</button>
   </div>
-  <p class="dl-note">Every build is self-contained — <strong>no libsodium or other
-     dependencies to install</strong>, on any platform. Printer-queue registration
-     is macOS/Linux; the Windows build is command-line. All builds are also on the
+  <p class="dl-note">Every build is self-contained, with <strong>no libsodium or other
+     dependency to install</strong> on any platform. Printer-queue registration is
+     macOS and Linux; the Windows build is command-line. All builds are also on the
      <a href="https://github.com/Eselase-Noble/securedrv/releases">releases page</a>.</p>
 </div></section>
 
@@ -349,14 +349,14 @@
   <h2>Getting started</h2>
   <p class="sec-intro">Two roles: an <strong>admin</strong> runs the server where the
      printer lives; everyone else is a <strong>client</strong> who prints to it from
-     any network. Every download is self-contained — nothing else to install.</p>
+     any network. Every download is self-contained, so there is nothing else to install.</p>
 
   <p class="role">If you're a client</p>
   <ol class="steps">
     <li>Download the build for your system above and unzip it. On macOS, clear the
         download quarantine once: <code>xattr -dr com.apple.quarantine .</code></li>
-    <li>Create your identity — it prints your client key:
-        <code>./cipherjet-keygen net-client</code>. Send that key to your admin.</li>
+    <li>Create your identity by running <code>./cipherjet-keygen net-client</code>.
+        It prints your client key. Send that key to your admin.</li>
     <li>Your admin authorises you and gives you the server's key, host and port.
         Save them once in <code>~/.local/share/cipherjet/client.conf</code>:
         <code>host = print.example.com</code>, <code>port = 9310</code>,
