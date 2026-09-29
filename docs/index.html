@@ -138,8 +138,9 @@
   .method small code{font-family:var(--mono);font-size:.85em;background:var(--paper-2);padding:1px 5px;border-radius:2px}
 
   /* Download */
-  .downloads{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:26px}
-  @media(max-width:680px){.downloads{grid-template-columns:1fr}}
+  .downloads{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+  @media(max-width:820px){.downloads{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:420px){.downloads{grid-template-columns:1fr}}
   .dl{display:flex;flex-direction:column;gap:3px;border:1.5px solid var(--ink);
     border-radius:2px;padding:18px 20px;background:var(--paper);position:relative}
   .dl:hover{background:var(--ink);text-decoration:none}
@@ -285,13 +286,17 @@
       <span class="dl-os">macOS</span><span class="dl-arch">Intel</span></a>
     <a class="dl" data-os="linux" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-linux-x86_64.tar.gz" download>
       <span class="dl-os">Linux</span><span class="dl-arch">x86_64</span></a>
+    <a class="dl" data-os="windows" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-windows-x86_64.zip" download>
+      <span class="dl-os">Windows</span><span class="dl-arch">x86_64</span></a>
   </div>
-  <p class="dl-after">Once it downloads, unpack and register the printer:</p>
+  <p class="dl-after">On macOS or Linux, unpack and register the printer:</p>
   <div class="term">
     <code><b>$</b> tar xzf cipherjet-*.tar.gz &amp;&amp; sudo ./install/install-cups-printer.sh</code>
     <button class="copy" data-copy="tar xzf cipherjet-*.tar.gz && sudo ./install/install-cups-printer.sh">Copy</button>
   </div>
-  <p class="dl-note">On Windows, build from source (below). All builds are also on the
+  <p class="dl-note">The Windows build is a statically linked command-line tool
+     (no DLLs to install); printer-queue registration is macOS/Linux for now. All
+     builds are also on the
      <a href="https://github.com/Eselase-Noble/securedrv/releases">releases page</a>.</p>
 </div></section>
 
@@ -363,7 +368,8 @@
   (function(){
     var ua=(navigator.userAgent||"")+" "+(navigator.platform||"");
     var pick=[];
-    if(/Mac/i.test(ua))         pick=['mac-arm','mac-intel'];
+    if(/Win/i.test(ua))         pick=['windows'];
+    else if(/Mac/i.test(ua))    pick=['mac-arm','mac-intel'];
     else if(/Linux|X11/i.test(ua) && !/Android/i.test(ua)) pick=['linux'];
     pick.forEach(function(os){
       var el=document.querySelector('.dl[data-os="'+os+'"]');

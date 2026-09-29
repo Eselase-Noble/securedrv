@@ -61,9 +61,11 @@ make test       # run the 58-check test suite
 make printer    # register the printer (sudo)   — or `make install` for binaries only
 ```
 
-**Prebuilt binaries:** download a tarball for your platform from the
+**Prebuilt binaries:** download a build for your platform from the
 [Releases](https://github.com/Eselase-Noble/securedrv/releases) page (produced by
-CI), unpack, and run `sudo ./install/install-cups-printer.sh`.
+CI) — Linux x86_64, macOS Intel & Apple Silicon (`.tar.gz`), and Windows x86_64
+(`.zip`, statically linked). On macOS/Linux, unpack and run
+`sudo ./install/install-cups-printer.sh`; the Windows build is a command-line tool.
 
 ---
 

@@ -33,8 +33,8 @@ endif()
 # Export compile_commands.json so editors / clang-tidy can index the project.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Security-oriented compile & link hardening flags. These are best-effort:
-# unsupported flags are simply ignored by the compiler feature checks below.
+# Security-oriented compile & link hardening flags, chosen per compiler so the
+# same tree builds cleanly with GCC/Clang (Linux, macOS) and MSVC (Windows).
 include(CheckCXXCompilerFlag)
 function(securedrv_add_flag flag var)
     check_cxx_compiler_flag("${flag}" ${var})
@@ -43,16 +43,49 @@ function(securedrv_add_flag flag var)
     endif()
 endfunction()
 
-add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion)
-securedrv_add_flag(-fstack-protector-strong HAVE_STACK_PROTECTOR)
-securedrv_add_flag(-fstack-clash-protection HAVE_STACK_CLASH)
-securedrv_add_flag(-D_FORTIFY_SOURCE=2       HAVE_FORTIFY)   # honoured in optimized builds
+if(MSVC)
+    # /W3 warnings, standards conformance, and control-flow-guard hardening.
+    add_compile_options(/W3 /permissive- /guard:cf)
+    add_link_options(/guard:cf)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion)
+    securedrv_add_flag(-fstack-protector-strong HAVE_STACK_PROTECTOR)
+    securedrv_add_flag(-fstack-clash-protection HAVE_STACK_CLASH)
+    securedrv_add_flag(-D_FORTIFY_SOURCE=2       HAVE_FORTIFY)  # honoured in optimized builds
+endif()
 
 # ---- Dependencies -----------------------------------------------------------
-# libsodium provides all cryptographic primitives. We locate it via pkg-config,
-# which is how Homebrew installs it on macOS and how distros ship it on Linux.
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(SODIUM REQUIRED IMPORTED_TARGET libsodium)
+# libsodium provides all cryptographic primitives. Discovery is cross-platform:
+#   1) pkg-config        (Homebrew on macOS, distro -dev packages on Linux)
+#   2) unofficial-sodium CONFIG package (how vcpkg exposes it on Windows)
+#   3) a manual find as a last resort
+# The result is normalised to one link target: securedrv::sodium.
+add_library(securedrv_sodium INTERFACE)
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(SODIUM QUIET IMPORTED_TARGET libsodium)
+endif()
+if(TARGET PkgConfig::SODIUM)
+    target_link_libraries(securedrv_sodium INTERFACE PkgConfig::SODIUM)
+else()
+    find_package(unofficial-sodium CONFIG QUIET)
+    if(TARGET unofficial-sodium::sodium)
+        target_link_libraries(securedrv_sodium INTERFACE unofficial-sodium::sodium)
+    else()
+        find_path(SODIUM_INCLUDE_DIR sodium.h)
+        find_library(SODIUM_LIBRARY NAMES sodium libsodium)
+        if(NOT SODIUM_INCLUDE_DIR OR NOT SODIUM_LIBRARY)
+            message(FATAL_ERROR "libsodium not found (install libsodium-dev / brew libsodium / vcpkg libsodium)")
+        endif()
+        target_include_directories(securedrv_sodium INTERFACE "${SODIUM_INCLUDE_DIR}")
+        target_link_libraries(securedrv_sodium INTERFACE "${SODIUM_LIBRARY}")
+    endif()
+endif()
+# When libsodium is linked statically on Windows (vcpkg *-static triplets),
+# consumers must define SODIUM_STATIC so headers don't use __declspec(dllimport).
+if(WIN32)
+    target_compile_definitions(securedrv_sodium INTERFACE SODIUM_STATIC)
+endif()
 
 # =============================================================================
 #  Core library: all reusable engine code lives here so that the driver, the
@@ -71,7 +104,7 @@ add_library(securedrv_core STATIC
 target_include_directories(securedrv_core
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(securedrv_core PUBLIC PkgConfig::SODIUM)
+target_link_libraries(securedrv_core PUBLIC securedrv_sodium)
 
 # Propagate the project version into the code as CIPHERJET_VERSION so every
 # executable can answer `--version`. Single source of truth: project(... VERSION).

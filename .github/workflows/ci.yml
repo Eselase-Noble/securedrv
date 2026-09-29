@@ -1,5 +1,5 @@
 # =============================================================================
-#  CI — build Cipherjet and run its test suite on Linux and macOS.
+#  CI — build Cipherjet and run its test suite on Linux, macOS and Windows.
 # =============================================================================
 name: CI
 
@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
       - uses: actions/checkout@v4
 
@@ -30,11 +30,30 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install libsodium cmake pkg-config
 
-      - name: Configure
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install libsodium:x64-windows-static-md
+        shell: pwsh
+
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build
-        run: cmake --build build -j
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: >
+          cmake -S . -B build
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
 
-      - name: Test
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
         run: ctest --test-dir build --output-on-failure
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        run: ctest --test-dir build -C Release --output-on-failure

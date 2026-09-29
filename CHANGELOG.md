@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Windows support: cross-platform libsodium discovery (pkg-config / vcpkg
+  `unofficial-sodium` / manual), MSVC-appropriate hardening flags, a Windows CI
+  job, and a prebuilt `cipherjet-windows-x86_64.zip` (statically linked, no DLLs)
+  attached to releases and offered on the website.
+
 ## [1.0.0] — 2026-09-28
 
 ### Added
