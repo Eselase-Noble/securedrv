@@ -17,15 +17,18 @@
 // =============================================================================
 #include <sodium.h>
 
+#include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "securedrv/audit_log.hpp"
 #include "securedrv/config.hpp"
+#include "securedrv/discovery.hpp"
 #include "securedrv/errors.hpp"
 #include "securedrv/net_crypto.hpp"
 #include "securedrv/net_keys.hpp"
@@ -49,7 +52,10 @@ using namespace securedrv;
 namespace {
 
 constexpr std::uint8_t  kHello[4] = {'C', 'J', 'N', 'P'};
-constexpr std::uint8_t  kProtoVersion = 1;
+constexpr std::uint8_t  kProtoVersion = 2;   // v2: flags byte + optional anon auth
+constexpr std::uint8_t  kFlagLanOpen  = 0x01;
+constexpr std::uint8_t  kAuthAnon     = 0x00;
+constexpr std::uint8_t  kAuthSigned   = 0x01;
 constexpr const char*   kAuthDomain = "cipherjet-auth-v1";
 constexpr std::uint16_t kDefaultPort = 9310;
 
@@ -57,50 +63,66 @@ void usage() {
     std::cerr <<
         "cipherjet-server — secure print server (decrypts and releases jobs)\n"
         "Usage:\n"
-        "  cipherjet-server [--port N] [--printer NAME | --exec \"CMD\"]\n\n"
-        "  --port N        TCP port to listen on (default 9310)\n"
+        "  cipherjet-server [--port N] [--printer NAME | --exec \"CMD\"] [options]\n\n"
+        "  --port N        TCP + discovery port to listen on (default 9310)\n"
         "  --printer NAME  release each job with: lp -d NAME\n"
-        "  --exec \"CMD\"    release each job by piping plaintext to CMD (default: lp)\n\n"
-        "Keys live in CIPHERJET_HOME; create them with 'cipherjet-keygen net-server'\n"
-        "and authorise clients in <CIPHERJET_HOME>/authorized_clients.\n";
+        "  --exec \"CMD\"    release each job by piping plaintext to CMD (default: lp)\n"
+        "  --require-auth  require an authorised client key even on the LAN\n"
+        "  --no-discovery  do not advertise on the local network\n\n"
+        "By default, clients on the local network can print with no key exchange;\n"
+        "clients from other networks must be in <CIPHERJET_HOME>/authorized_clients.\n"
+        "Keys live in CIPHERJET_HOME; create them with 'cipherjet-keygen net-server'.\n";
 }
 
 /// Handle one client connection. Returns true if a job was accepted+released.
-bool handle_client(net::Conn& conn, const std::string& peer,
+/// `lan_open` allows anonymous/unlisted clients when the peer is on the LAN.
+bool handle_client(net::Conn& conn, const std::string& peer, bool lan_open,
                    const net::ServerBoxKey& server,
                    const std::vector<net::PublicKey>& allow,
                    const std::string& exec_cmd, AuditLog& audit) {
-    // 1) Send hello + challenge.
+    const bool peer_is_lan = net::is_lan_address(peer);
+
+    // 1) Send hello + flags + challenge.
     std::uint8_t challenge[net::kContextBytes];
     randombytes_buf(challenge, sizeof(challenge));
     std::vector<std::uint8_t> hello;
     hello.insert(hello.end(), kHello, kHello + 4);
     hello.push_back(kProtoVersion);
+    hello.push_back((lan_open && peer_is_lan) ? kFlagLanOpen : 0);
     hello.insert(hello.end(), challenge, challenge + sizeof(challenge));
     conn.send_all(hello.data(), hello.size());
 
-    // 2) Receive client public key + signature and authenticate.
-    std::uint8_t client_pk[crypto_sign_PUBLICKEYBYTES];
-    std::uint8_t sig[crypto_sign_BYTES];
-    conn.recv_exact(client_pk, sizeof(client_pk));
-    conn.recv_exact(sig, sizeof(sig));
+    // 2) Read the auth mode the client chose.
+    std::uint8_t auth_mode = 0;
+    conn.recv_exact(&auth_mode, 1);
 
-    std::vector<std::uint8_t> signed_msg(kAuthDomain, kAuthDomain + std::strlen(kAuthDomain));
-    signed_msg.insert(signed_msg.end(), challenge, challenge + sizeof(challenge));
-
-    net::PublicKey cpk{};
-    std::memcpy(cpk.data(), client_pk, cpk.size());
-    const bool ok =
-        net::is_authorized(allow, cpk) &&
-        crypto_sign_verify_detached(sig, signed_msg.data(), signed_msg.size(),
-                                    client_pk) == 0;
+    bool ok = false;
+    std::string cid = "anonymous";
+    if (auth_mode == kAuthSigned) {
+        std::uint8_t client_pk[crypto_sign_PUBLICKEYBYTES];
+        std::uint8_t sig[crypto_sign_BYTES];
+        conn.recv_exact(client_pk, sizeof(client_pk));
+        conn.recv_exact(sig, sizeof(sig));
+        std::vector<std::uint8_t> signed_msg(kAuthDomain, kAuthDomain + std::strlen(kAuthDomain));
+        signed_msg.insert(signed_msg.end(), challenge, challenge + sizeof(challenge));
+        net::PublicKey cpk{};
+        std::memcpy(cpk.data(), client_pk, cpk.size());
+        const bool sig_ok = crypto_sign_verify_detached(
+            sig, signed_msg.data(), signed_msg.size(), client_pk) == 0;
+        cid = util::to_hex(client_pk, sizeof(client_pk));
+        // A valid signer is accepted if allow-listed, or if it's a LAN peer and
+        // LAN access is open.
+        ok = sig_ok && (net::is_authorized(allow, cpk) || (lan_open && peer_is_lan));
+    } else if (auth_mode == kAuthAnon) {
+        // Anonymous clients are only accepted on the LAN when LAN access is open.
+        ok = lan_open && peer_is_lan;
+    }
 
     std::uint8_t status = ok ? 1 : 0;
     conn.send_all(&status, 1);
     if (!ok) {
-        std::string cid = util::to_hex(client_pk, sizeof(client_pk));
-        std::cerr << "cipherjet-server: rejected client " << cid.substr(0, 16)
-                  << "… from " << peer << "\n";
+        std::cerr << "cipherjet-server: rejected " << cid.substr(0, 16)
+                  << "… from " << peer << (peer_is_lan ? " (lan)" : " (remote)") << "\n";
         audit.record("net-reject", cid, "peer=" + peer);
         return false;
     }
