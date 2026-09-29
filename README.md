@@ -1,3 +1,4 @@
+<p align="center"><img src="docs/logo.svg" width="76" height="76" alt="Cipherjet"></p>
 <h1 align="center">Cipherjet</h1>
 <p align="center"><em>Encrypted printing, end to end.</em></p>
 

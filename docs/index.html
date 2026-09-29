@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cipherjet — encrypted printing</title>
 <meta name="description" content="Cipherjet is a printer driver that seals every job in authenticated encryption the moment it leaves the application. Built in C++ on libsodium.">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
@@ -38,11 +39,7 @@
   .word{font-family:var(--sans);font-weight:800;font-size:1.32rem;letter-spacing:-.03em;
     color:var(--ink);display:flex;align-items:center;gap:11px}
   .word:hover{text-decoration:none}
-  .mark{width:15px;height:20px;position:relative;display:inline-block;
-    background:var(--blue);
-    -webkit-mask:repeating-linear-gradient(45deg,#000 0 2px,transparent 2px 5px);
-            mask:repeating-linear-gradient(45deg,#000 0 2px,transparent 2px 5px);
-    border:1.5px solid var(--ink);}
+  .logo{display:block;width:28px;height:28px}
   .nav{margin-left:auto;display:flex;gap:26px;align-items:center;font-family:var(--sans);
     font-size:.95rem;font-weight:500}
   .nav a{color:var(--ink)}
@@ -77,9 +74,12 @@
     background:var(--paper);color:var(--ink);padding:6px 11px;border-radius:2px;cursor:pointer}
   .copy:hover{background:var(--ink);color:var(--paper)}
 
-  /* ---- Specimen ---- */
-  .specimen{border:1.5px solid var(--ink);background:var(--paper);border-radius:3px;
-    position:relative;overflow:hidden;box-shadow:8px 8px 0 rgba(23,32,41,.08)}
+  /* ---- Specimen (stacked-document image) ---- */
+  .stage{position:relative}
+  .sheet-back{position:absolute;inset:0;transform:rotate(-3.2deg);transform-origin:60% 40%;
+    background:var(--paper-2);border:1.5px solid var(--ink);border-radius:3px;z-index:0}
+  .specimen{position:relative;z-index:1;border:1.5px solid var(--ink);background:var(--paper);
+    border-radius:3px;overflow:hidden;box-shadow:4px 5px 0 rgba(23,32,41,.10)}
   .specimen .strip{display:flex;justify-content:space-between;align-items:baseline;
     font-family:var(--sans);font-weight:700;font-size:.78rem;letter-spacing:.04em;
     padding:12px 18px;border-bottom:1.5px solid var(--ink);background:var(--ink);color:var(--paper)}
@@ -91,15 +91,14 @@
   .seal-flow{color:var(--blue);font-family:var(--sans);font-weight:600;font-size:.8rem;margin:0 0 6px}
   .cipher{font-family:var(--mono);font-size:.86rem;color:var(--ink);word-break:break-all;
     line-height:1.5;margin:0;max-width:34ch}
-  .seal{position:absolute;right:14px;bottom:16px;transform:rotate(-8deg);
-    border:2.5px solid var(--seal);color:var(--seal);border-radius:4px;
-    font-family:var(--sans);font-weight:800;letter-spacing:.08em;font-size:1.02rem;
-    padding:7px 14px;background:rgba(236,237,229,.5)}
-  .seal::after{content:"";position:absolute;inset:3px;border:1px solid var(--seal);border-radius:3px;opacity:.5}
+  .stamp{position:absolute;right:16px;bottom:14px;transform:rotate(-9deg);text-align:center;line-height:1}
+  .stamp img{display:block;margin:0 auto 3px;filter:drop-shadow(0 1px 1px rgba(23,32,41,.15))}
+  .stamp span{font-family:var(--sans);font-weight:800;letter-spacing:.12em;
+    font-size:.7rem;color:var(--seal)}
   @media(prefers-reduced-motion:no-preference){
-    .seal{animation:stamp .5s cubic-bezier(.2,1.4,.4,1) .5s both}
-    @keyframes stamp{from{transform:rotate(-8deg) scale(1.5);opacity:0}
-      to{transform:rotate(-8deg) scale(1);opacity:1}}
+    .stamp{animation:stamp .5s cubic-bezier(.2,1.5,.4,1) .55s both}
+    @keyframes stamp{from{transform:rotate(-9deg) scale(1.6);opacity:0}
+      to{transform:rotate(-9deg) scale(1);opacity:1}}
   }
 
   /* ---- Sections ---- */
@@ -189,7 +188,7 @@
 <body>
 
 <header class="mast"><div class="wrap">
-  <a class="word" href="#top"><span class="mark"></span>Cipherjet</a>
+  <a class="word" href="#top"><img class="logo" src="logo.svg" alt="" width="28" height="28">Cipherjet</a>
   <nav class="nav">
     <a class="plain" href="#spec">Specification</a>
     <a class="plain" href="#custody">How it works</a>
@@ -215,18 +214,24 @@
     </div>
   </div>
 
-  <figure class="specimen" aria-label="A print job before and after Cipherjet seals it">
-    <div class="strip">PRINT JOB 4a2f…e19<span>received 14:22</span></div>
-    <div class="body">
-      <p class="lbl">As sent by the application</p>
-      <p class="plain">Q3 Board Minutes — final.pdf</p>
-      <p class="seal-flow">↓ sealed with a per-job key</p>
-      <p class="lbl">As stored in the spool</p>
-      <p class="cipher">9f3a1c8b 77e2d410 a6b0ff29 4c81e7aa
-        13d9c05e 8be1740f 2a77c9d3 e0b41a6c</p>
-      <div class="seal">ENCRYPTED</div>
-    </div>
-  </figure>
+  <div class="stage">
+    <div class="sheet-back" aria-hidden="true"></div>
+    <figure class="specimen" aria-label="A print job before and after Cipherjet seals it">
+      <div class="strip">PRINT JOB 4a2f…e19<span>received 14:22</span></div>
+      <div class="body">
+        <p class="lbl">As sent by the application</p>
+        <p class="plain">Q3 Board Minutes — final.pdf</p>
+        <p class="seal-flow">↓ sealed with a per-job key</p>
+        <p class="lbl">As stored in the spool</p>
+        <p class="cipher">9f3a1c8b 77e2d410 a6b0ff29 4c81e7aa
+          13d9c05e 8be1740f 2a77c9d3 e0b41a6c</p>
+        <div class="stamp">
+          <img src="logo.svg" alt="" width="66" height="66">
+          <span>ENCRYPTED</span>
+        </div>
+      </div>
+    </figure>
+  </div>
 </div></div>
 
 <section id="spec"><div class="wrap sec-pad">

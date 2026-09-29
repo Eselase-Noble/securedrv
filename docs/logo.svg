@@ -1,0 +1,11 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cipherjet">
+  <!-- Wax-seal emblem: a stamped "C" with a keyhole — a sealed, locked document. -->
+  <circle cx="32" cy="32" r="30" fill="#b0392b"/>
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#8a2a1f" stroke-width="2"/>
+  <circle cx="32" cy="32" r="24.5" fill="none" stroke="#ECEDE5" stroke-width="1.6" stroke-dasharray="2.5 3.1" opacity="0.55"/>
+  <!-- Monogram C, open to the right -->
+  <path d="M43 20.5 A16 16 0 1 0 43 43.5" fill="none" stroke="#ECEDE5" stroke-width="6.2" stroke-linecap="round"/>
+  <!-- Keyhole at the heart of the C -->
+  <circle cx="32" cy="30" r="3.4" fill="#ECEDE5"/>
+  <path d="M30.4 31.5 L33.6 31.5 L34.8 38 L29.2 38 Z" fill="#ECEDE5"/>
+</svg>
