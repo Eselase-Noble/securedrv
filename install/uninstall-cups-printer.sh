@@ -32,7 +32,9 @@ lpadmin -x "$QUEUE_NAME" 2>/dev/null || echo "    (queue not present)"
 echo "==> Removing backend + binaries"
 [ -n "$BACKEND_DIR" ] && rm -f "$BACKEND_DIR/cipherjet"
 rm -f "$BIN_DIR/cipherjet" "$BIN_DIR/cipherjet-release" \
-      "$BIN_DIR/cipherjet-keygen" "$BIN_DIR/cipherjet-admin"
+      "$BIN_DIR/cipherjet-keygen" "$BIN_DIR/cipherjet-admin" \
+      "$BIN_DIR/cipherjet-send" "$BIN_DIR/cipherjet-server" \
+      "$BIN_DIR/cipherjet-print"
 
 if [ "$PURGE" -eq 1 ]; then
   echo "==> Purging keys, spool and passphrase (irreversible)"

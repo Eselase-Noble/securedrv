@@ -7,15 +7,16 @@
 #  encrypts the job into a root-owned system spool; decryption/release is an
 #  admin-only operation (see cipherjet-admin, installed below).
 #
+#  It ensures the binaries are SELF-CONTAINED (static libsodium). This matters on
+#  macOS: the CUPS sandbox blocks a backend from loading a Homebrew dylib out of
+#  /usr/local, which is a common cause of "Something went wrong when printing".
+#
 #  Run with sudo:   sudo ./install/install-cups-printer.sh
 #
-#  What it installs:
-#    /usr/local/bin/cipherjet{,-release,-keygen}   the built binaries
-#    /usr/local/bin/cipherjet-admin                 root helper for release/list
-#    /usr/local/etc/cipherjet/passphrase            master-key passphrase (0600)
-#    /usr/local/var/cipherjet/                       system data dir (key+spool)
-#    <cups-backend-dir>/cipherjet                    CUPS backend wrapper
-#    a CUPS queue named "Cipherjet"
+#  Installs to /usr/local/bin (already on PATH): cipherjet, cipherjet-release,
+#  cipherjet-keygen, cipherjet-send, cipherjet-server, cipherjet-admin,
+#  cipherjet-print; plus the CUPS backend, a "Cipherjet" queue, and the system
+#  key/spool under /usr/local/{etc,var}/cipherjet.
 # =============================================================================
 set -euo pipefail
 
@@ -24,10 +25,11 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-# --- Resolve paths -----------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="${CIPHERJET_BUILD:-$PROJECT_DIR/build}"
+SODIUM_PREFIX="$PROJECT_DIR/.sodium-static"
+SODIUM_VER="1.0.20"
 
 QUEUE_NAME="${CIPHERJET_QUEUE:-Cipherjet}"
 BIN_DIR="/usr/local/bin"
@@ -35,20 +37,53 @@ ETC_DIR="/usr/local/etc/cipherjet"
 VAR_DIR="/usr/local/var/cipherjet"
 PASS_FILE="$ETC_DIR/passphrase"
 
-# CUPS backend directory differs by OS.
+OS="$(uname -s)"
 if   [ -d /usr/libexec/cups/backend ]; then BACKEND_DIR=/usr/libexec/cups/backend   # macOS
 elif [ -d /usr/lib/cups/backend ];     then BACKEND_DIR=/usr/lib/cups/backend       # Linux
 else echo "Cannot find the CUPS backend directory." >&2; exit 1; fi
 
-for b in cipherjet cipherjet-release cipherjet-keygen; do
-  [ -x "$BUILD_DIR/$b" ] || { echo "Missing $BUILD_DIR/$b — build the project first:
-    cmake -S \"$PROJECT_DIR\" -B \"$BUILD_DIR\" -DCMAKE_BUILD_TYPE=Release && cmake --build \"$BUILD_DIR\" -j" >&2; exit 1; }
-done
+# --- Is the current cipherjet binary self-contained (no external libsodium)? --
+binary_is_static() {
+  [ -x "$BUILD_DIR/cipherjet" ] || return 1
+  if [ "$OS" = "Darwin" ]; then
+    ! otool -L "$BUILD_DIR/cipherjet" 2>/dev/null | grep -qi sodium
+  else
+    ! ldd "$BUILD_DIR/cipherjet" 2>/dev/null | grep -qi sodium
+  fi
+}
 
-echo "==> Installing binaries into $BIN_DIR"
-install -m 0755 "$BUILD_DIR/cipherjet"         "$BIN_DIR/cipherjet"
-install -m 0755 "$BUILD_DIR/cipherjet-release" "$BIN_DIR/cipherjet-release"
-install -m 0755 "$BUILD_DIR/cipherjet-keygen"  "$BIN_DIR/cipherjet-keygen"
+ensure_static_build() {
+  if binary_is_static; then
+    echo "==> Using existing self-contained build in $BUILD_DIR"
+    return
+  fi
+  echo "==> Building self-contained binaries (static libsodium) so the CUPS"
+  echo "    backend has no external library the sandbox can block."
+  if [ ! -f "$SODIUM_PREFIX/lib/libsodium.a" ]; then
+    echo "    - building static libsodium $SODIUM_VER"
+    tmp="$(mktemp -d)"
+    curl -fsSL -o "$tmp/libsodium.tar.gz" \
+      "https://download.libsodium.org/libsodium/releases/libsodium-${SODIUM_VER}-stable.tar.gz"
+    tar xzf "$tmp/libsodium.tar.gz" -C "$tmp"
+    ( cd "$tmp/libsodium-stable" \
+      && ./configure --enable-static --disable-shared --prefix="$SODIUM_PREFIX" >/dev/null \
+      && make -j >/dev/null && make install >/dev/null )
+    rm -rf "$tmp"
+  fi
+  echo "    - building Cipherjet"
+  cmake -S "$PROJECT_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release \
+        -DCIPHERJET_SODIUM_ROOT="$SODIUM_PREFIX" >/dev/null
+  cmake --build "$BUILD_DIR" -j >/dev/null
+}
+
+ensure_static_build
+
+echo "==> Installing binaries into $BIN_DIR (on your PATH)"
+for b in cipherjet cipherjet-release cipherjet-keygen cipherjet-send cipherjet-server; do
+  install -m 0755 "$BUILD_DIR/$b" "$BIN_DIR/$b"
+done
+# The everyday CLI wrapper (finds the installed binaries on PATH).
+install -m 0755 "$PROJECT_DIR/bin/cipherjet-print" "$BIN_DIR/cipherjet-print"
 
 echo "==> Preparing system directories (root-owned)"
 mkdir -p "$ETC_DIR" "$VAR_DIR"
@@ -68,8 +103,6 @@ CIPHERJET_HOME="$VAR_DIR" CIPHERJET_PASSPHRASE_FILE="$PASS_FILE" \
   || echo "    master key already present."
 
 echo "==> Installing CUPS backend wrapper into $BACKEND_DIR/cipherjet"
-# The wrapper injects the system data dir + passphrase file, then execs the
-# real binary. With no arguments (CUPS device discovery) it just advertises.
 cat > "$BACKEND_DIR/cipherjet" <<EOF
 #!/bin/sh
 # Cipherjet CUPS backend — auto-generated by install-cups-printer.sh
@@ -78,15 +111,13 @@ export CIPHERJET_HOME="$VAR_DIR"
 export CIPHERJET_PASSPHRASE_FILE="$PASS_FILE"
 exec "$BIN_DIR/cipherjet" "\$@"
 EOF
-# 0700 root-owned => CUPS runs the backend as root, which can read the
-# passphrase file and own the spool. Decryption is likewise admin-only.
 chown root "$BACKEND_DIR/cipherjet" 2>/dev/null || true
 chmod 0700 "$BACKEND_DIR/cipherjet"
 
 echo "==> Installing admin helper $BIN_DIR/cipherjet-admin"
 cat > "$BIN_DIR/cipherjet-admin" <<EOF
 #!/bin/sh
-# Run the release/list/audit tools against the system spool. Use with sudo:
+# Release/list/audit the system spool. Use with sudo:
 #   sudo cipherjet-admin list
 #   sudo cipherjet-admin release <job-id> | lp -d <printer>
 export CIPHERJET_HOME="$VAR_DIR"
@@ -96,7 +127,6 @@ EOF
 chmod 0755 "$BIN_DIR/cipherjet-admin"
 
 echo "==> Creating the CUPS print queue '$QUEUE_NAME'"
-# A raw queue passes the application's print data straight to our backend.
 lpadmin -p "$QUEUE_NAME" -E -v "cipherjet:/secure-spool" \
         -D "Cipherjet (Encrypted)" -L "Secure encrypted spool" -m raw \
   || lpadmin -p "$QUEUE_NAME" -E -v "cipherjet:/secure-spool" \
@@ -104,17 +134,35 @@ lpadmin -p "$QUEUE_NAME" -E -v "cipherjet:/secure-spool" \
 cupsenable "$QUEUE_NAME" || true
 cupsaccept "$QUEUE_NAME" || true
 
+# --- Self-test: print through the queue and confirm a job was encrypted -------
+echo "==> Self-test: sending a job through the queue..."
+before=$(CIPHERJET_HOME="$VAR_DIR" CIPHERJET_PASSPHRASE_FILE="$PASS_FILE" \
+         "$BIN_DIR/cipherjet-release" list 2>&1 | grep -Ec '^[0-9a-f]{32}' || true)
+printf 'Cipherjet install self-test\n' | lp -d "$QUEUE_NAME" >/dev/null 2>&1 || true
+sleep 3
+after=$(CIPHERJET_HOME="$VAR_DIR" CIPHERJET_PASSPHRASE_FILE="$PASS_FILE" \
+        "$BIN_DIR/cipherjet-release" list 2>&1 | grep -Ec '^[0-9a-f]{32}' || true)
+
+echo
+if [ "$after" -gt "$before" ]; then
+  echo "✔ Self-test PASSED — a job was encrypted into the spool via CUPS."
+  echo "  \"Cipherjet (Encrypted)\" now works from any app's Print dialog (⌘P)."
+else
+  echo "✗ Self-test did NOT see a new job. The CUPS sandbox may still be blocking"
+  echo "  the backend. As a fallback, allow unsandboxed backends and retry:"
+  echo "      echo 'Sandboxing off' | sudo tee -a /etc/cups/cups-files.conf"
+  echo "      sudo launchctl kickstart -k system/org.cups.cupsd   # macOS"
+  echo "  Then: printf 'test\\n' | lp -d $QUEUE_NAME ; sudo cipherjet-admin list"
+fi
+
 cat <<EOF
 
-✔ Installed. "Cipherjet (Encrypted)" is now a printer you can select.
+Everything is on your PATH now (/usr/local/bin), so from anywhere you can:
+    cipherjet-print print file.pdf     # personal encrypt-and-hold, then:
+    cipherjet-print release-all        # send to your default printer
+    cipherjet-send file.pdf            # print to a Cipherjet server on the LAN
+    sudo cipherjet-admin list          # inspect the system print queue's spool
+    sudo cipherjet-admin release <id> | lp -d IT_MONITORING_1
 
-  Print to it from any app (⌘P → Cipherjet (Encrypted)) or via:
-      lp -d $QUEUE_NAME somefile.pdf
-
-  List and release the encrypted jobs (admin-only):
-      sudo cipherjet-admin list
-      sudo cipherjet-admin release <job-id> | lp -d IT_MONITORING_1
-      sudo cipherjet-admin verify-audit
-
-  To remove everything:  sudo ./install/uninstall-cups-printer.sh
+Remove everything:  sudo ./install/uninstall-cups-printer.sh
 EOF

@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.0] — 2026-09-29
+## [1.2.1] — 2026-09-29
+
+### Fixed
+- macOS "Something went wrong when printing" via the ⌘P system printer: the CUPS
+  installer now builds and installs **self-contained (static)** binaries, so the
+  sandboxed backend has no external libsodium dylib to load (a common failure).
+
+### Changed
+- The CUPS installer now installs every tool plus the `cipherjet-print` wrapper to
+  `/usr/local/bin` (on PATH), and runs a self-test that prints through the queue
+  and confirms a job was encrypted. `cipherjet-print` now finds binaries on PATH
+  or in a local `./build`, so it works both from the repo and once installed.
 
 ### Added
 - **Zero-setup printing on the same network.** `cipherjet-send` with no `--host`
@@ -95,7 +106,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project website (`docs/`).
 - Dependency-free unit test suite (58 checks).
 
-[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.1...v1.1.0

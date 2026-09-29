@@ -20,14 +20,20 @@
 # =============================================================================
 set -euo pipefail
 
-# --- Locate the built binaries relative to this script ----------------------
+# --- Locate the binaries: prefer a local ./build, else fall back to PATH -----
+# (so this wrapper works both from the repo and after being installed system-wide)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${CIPHERJET_BUILD:-$SCRIPT_DIR/../build}"
-DRV="$BUILD_DIR/cipherjet"
-REL="$BUILD_DIR/cipherjet-release"
-KEYGEN="$BUILD_DIR/cipherjet-keygen"
+find_bin() {
+  if [ -x "$BUILD_DIR/$1" ]; then echo "$BUILD_DIR/$1"
+  elif command -v "$1" >/dev/null 2>&1; then command -v "$1"
+  else echo ""; fi
+}
+DRV="$(find_bin cipherjet)"
+REL="$(find_bin cipherjet-release)"
+KEYGEN="$(find_bin cipherjet-keygen)"
 for b in "$DRV" "$REL" "$KEYGEN"; do
-  [ -x "$b" ] || { echo "cipherjet-print: missing binary $b — build the project first" >&2; exit 1; }
+  [ -n "$b" ] || { echo "cipherjet-print: cipherjet binaries not found (build the project or install it first)" >&2; exit 1; }
 done
 
 # --- Persistent data directory + passphrase ---------------------------------

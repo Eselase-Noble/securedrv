@@ -32,3 +32,6 @@ compile_commands.json
 # Cipherjet runtime data (belt-and-suspenders; these live outside the repo)
 passphrase
 /cipherjet-data/
+
+# Static libsodium build prefix (created by the installer)
+/.sodium-static/
