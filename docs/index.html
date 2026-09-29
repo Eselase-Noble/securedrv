@@ -54,10 +54,11 @@
       gap:14px 18px;font-size:.92rem}
   }
 
-  /* Centre the page content on mobile (desktop stays left-aligned by design).
-     Code/command text inside terminal boxes stays left-aligned for readability;
-     only the box itself is centred. */
-  @media(max-width:760px){
+  /* Centre the page content on mobile/tablet (desktop stays left-aligned by
+     design). The breakpoint matches where the hero stacks (900px) so a stacked
+     hero is never left dangling. Code/command text inside terminal boxes stays
+     left-aligned for readability; only the box itself is centred. */
+  @media(max-width:900px){
     .hero .wrap{text-align:center}
     .hero .headline,.hero .deck,.hero .kicker{margin-left:auto;margin-right:auto}
     .actions{justify-content:center}
