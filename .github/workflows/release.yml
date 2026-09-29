@@ -42,7 +42,7 @@ jobs:
         # macos-13 = Intel, macos-14 = Apple Silicon, ubuntu = Linux, windows = MSVC
         os: [ ubuntu-latest, macos-13, macos-14, windows-latest ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install build tools (Linux)
         if: runner.os == 'Linux'
