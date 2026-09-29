@@ -182,8 +182,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            *.tar.gz
-            *.zip
-            *.pkg
-            *.deb
+            cipherjet-*.tar.gz
+            cipherjet-*.zip
+            cipherjet-*.pkg
+            cipherjet-*.deb
           generate_release_notes: true
