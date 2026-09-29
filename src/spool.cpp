@@ -65,7 +65,7 @@ bool Spool::secure_remove(const std::string& job_id_hex) const {
             std::vector<unsigned char> chunk(64 * 1024);
             std::uintmax_t remaining = size;
             while (remaining > 0) {
-                std::size_t n = static_cast<std::size_t>(
+                std::size_ t n = static_cast<std::size_t>(
                     std::min<std::uintmax_t>(remaining, chunk.size()));
                 randombytes_buf(chunk.data(), n);
                 f.write(reinterpret_cast<const char*>(chunk.data()),
