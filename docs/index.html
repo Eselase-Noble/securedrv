@@ -322,26 +322,29 @@
 
 <section id="download"><div class="wrap sec-pad">
   <h2>Download</h2>
-  <p class="sec-intro" id="dl-intro">Grab a prebuilt build for your system. Each
-     archive holds the binaries, the install scripts, and the license.</p>
+  <p class="sec-intro" id="dl-intro">Download the installer for your system and
+     open it. Nothing else to install; the binaries are self-contained.</p>
   <div class="downloads">
-    <a class="dl" data-os="mac-arm" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-macos-arm64.tar.gz" download>
-      <span class="dl-os">macOS</span><span class="dl-arch">Apple Silicon</span></a>
-    <a class="dl" data-os="mac-intel" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-macos-x86_64.tar.gz" download>
-      <span class="dl-os">macOS</span><span class="dl-arch">Intel</span></a>
-    <a class="dl" data-os="linux" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-linux-x86_64.tar.gz" download>
-      <span class="dl-os">Linux</span><span class="dl-arch">x86_64</span></a>
+    <a class="dl" data-os="mac-arm" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-macos-arm64.pkg" download>
+      <span class="dl-os">macOS</span><span class="dl-arch">Apple Silicon &middot; .pkg</span></a>
+    <a class="dl" data-os="mac-intel" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-macos-x86_64.pkg" download>
+      <span class="dl-os">macOS</span><span class="dl-arch">Intel &middot; .pkg</span></a>
+    <a class="dl" data-os="linux" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-linux-amd64.deb" download>
+      <span class="dl-os">Linux</span><span class="dl-arch">Debian/Ubuntu &middot; .deb</span></a>
     <a class="dl" data-os="windows" href="https://github.com/Eselase-Noble/securedrv/releases/latest/download/cipherjet-windows-x86_64.zip" download>
-      <span class="dl-os">Windows</span><span class="dl-arch">x86_64</span></a>
+      <span class="dl-os">Windows</span><span class="dl-arch">x86_64 &middot; .zip</span></a>
   </div>
-  <p class="dl-after">On macOS or Linux, unpack and register the printer:</p>
-  <div class="term">
-    <code><b>$</b> tar xzf cipherjet-*.tar.gz &amp;&amp; sudo ./install/install-cups-printer.sh</code>
-    <button class="copy" data-copy="tar xzf cipherjet-*.tar.gz && sudo ./install/install-cups-printer.sh">Copy</button>
-  </div>
-  <p class="dl-note">Every build is self-contained, with <strong>no libsodium or other
-     dependency to install</strong> on any platform. Printer-queue registration is
-     macOS and Linux; the Windows build is command-line. All builds are also on the
+  <p class="dl-after">How each one installs:</p>
+  <ol class="steps">
+    <li><strong>macOS</strong>: open the <code>.pkg</code> and click through. (Unsigned for
+        now, so the first time: right-click the file, choose Open, then Allow.)</li>
+    <li><strong>Linux</strong>: <code>sudo apt install ./cipherjet-linux-amd64.deb</code></li>
+    <li><strong>Windows</strong>: unzip, then right-click <code>install.ps1</code> and Run with
+        PowerShell.</li>
+  </ol>
+  <p class="dl-note">Prefer a terminal? Use the one-line script under
+     &ldquo;Or build it yourself&rdquo; below. Plain <code>.tar.gz</code> archives
+     are also on the
      <a href="https://github.com/Eselase-Noble/securedrv/releases">releases page</a>.</p>
 </div></section>
 
@@ -425,7 +428,7 @@
 <footer><div class="wrap">
   <div class="sig">
     <div class="name">Noble Eselase Vulley</div>
-    <div class="meta">Cipherjet, version 1.2.2. Released under the MIT License, 2026.</div>
+    <div class="meta">Cipherjet, version 1.3.0. Released under the MIT License, 2026.</div>
   </div>
   <div class="flinks">
     <a href="https://github.com/Eselase-Noble/securedrv">Source</a>

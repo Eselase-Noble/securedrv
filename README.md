@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.2.2-5eead4">
+  <img alt="version" src="https://img.shields.io/badge/version-1.3.0-5eead4">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
   <img alt="platforms" src="https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-1e2838">
 </p>
@@ -61,12 +61,18 @@ make test       # run the 58-check test suite
 make printer    # register the printer (sudo)   — or `make install` for binaries only
 ```
 
-**Prebuilt binaries:** download a build for your platform from the
-[Releases](https://github.com/Eselase-Noble/securedrv/releases) page (produced by
-CI) — Linux x86_64, macOS Intel & Apple Silicon (`.tar.gz`), and Windows x86_64
-(`.zip`, statically linked). Every build is self-contained (static libsodium — nothing to install). On
-macOS/Linux, unpack and run `sudo ./install/install-cups-printer.sh`; the Windows
-build is a command-line tool.
+**Installers (easiest):** grab the native installer for your platform from the
+[Releases](https://github.com/Eselase-Noble/securedrv/releases) page and open it.
+Every build is self-contained (static libsodium, nothing else to install):
+
+| Platform | File | Install |
+|----------|------|---------|
+| macOS (Apple Silicon / Intel) | `cipherjet-macos-*.pkg` | double-click (first run: right-click → Open) |
+| Linux (Debian/Ubuntu) | `cipherjet-linux-amd64.deb` | `sudo apt install ./cipherjet-linux-amd64.deb` |
+| Windows | `cipherjet-windows-x86_64.zip` | unzip, right-click `install.ps1` → Run with PowerShell |
+
+Plain `.tar.gz` archives (binaries + the CUPS install scripts) are also attached
+for scripted deployments.
 
 ---
 

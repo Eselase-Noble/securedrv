@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-09-29
+
+### Added
+- **Native double-click installers**, attached to every release:
+  - macOS `.pkg` (Apple Silicon and Intel) — installs the tools to
+    `/usr/local/bin`, with a postinstall that keeps the directory clean.
+  - Linux `.deb` (Debian/Ubuntu) — `sudo apt install ./cipherjet-linux-amd64.deb`.
+  - Windows `.zip` now includes `install.ps1` (copies to `%LOCALAPPDATA%` and
+    adds it to PATH, no admin needed).
+- `packaging/` build scripts (`build-macos-pkg.sh`, `build-linux-deb.sh`,
+  `windows-install.ps1`) and release-workflow steps that produce and upload them.
+
 ## [1.2.2] — 2026-09-29
 
 ### Fixed
@@ -114,7 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project website (`docs/`).
 - Dependency-free unit test suite (58 checks).
 
-[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.1...v1.2.0

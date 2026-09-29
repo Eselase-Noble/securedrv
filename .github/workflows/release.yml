@@ -142,6 +142,12 @@ jobs:
           cp README.md LICENSE "dist/$PKG/"
           tar -C dist -czf "$ASSET" "$PKG"
           echo "ASSET=$ASSET" >> "$GITHUB_ENV"
+          # Native double-click installer for this OS.
+          if [ "$OSL" = "macos" ]; then
+            bash packaging/build-macos-pkg.sh "cipherjet-macos-${ARCH}.pkg"
+          elif [ "$OSL" = "linux" ]; then
+            bash packaging/build-linux-deb.sh "cipherjet-linux-amd64.deb"
+          fi
 
       # Notarize the signed macOS binaries with Apple so Gatekeeper clears them on
       # download (skipped unless notarization secrets are present).
@@ -167,6 +173,7 @@ jobs:
           $PKG = "dist/cipherjet-$VERSION-windows-x86_64"
           New-Item -ItemType Directory -Force -Path "$PKG/bin" | Out-Null
           Copy-Item build/Release/cipherjet.exe,build/Release/cipherjet-release.exe,build/Release/cipherjet-keygen.exe,build/Release/cipherjet-send.exe,build/Release/cipherjet-server.exe "$PKG/bin/"
+          Copy-Item packaging/windows-install.ps1 "$PKG/install.ps1"
           Copy-Item README.md,LICENSE "$PKG/"
           Compress-Archive -Path "$PKG" -DestinationPath $ASSET -Force
           "ASSET=$ASSET" | Out-File -FilePath $env:GITHUB_ENV -Append
@@ -174,5 +181,9 @@ jobs:
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ASSET }}
+          files: |
+            *.tar.gz
+            *.zip
+            *.pkg
+            *.deb
           generate_release_notes: true
