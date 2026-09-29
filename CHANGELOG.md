@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-09-29
+
+### Added
+- **Secure networked printing** (`cipherjet-send` → `cipherjet-server`). Clients
+  encrypt jobs end to end, sealed to the server's X25519 public key
+  (`crypto_box_seal`), and stream them over TCP to a server that decrypts and
+  releases to the printer. Works across different networks — the printer lives
+  with the server; clients only need to reach the server's address.
+  - Confidentiality is end-to-end (safe even over a plain socket / the internet);
+    clients hold no key that can decrypt.
+  - Clients authenticate with an Ed25519 signature over a per-connection
+    challenge, checked against a server allowlist.
+  - Job metadata travels inside the encrypted stream; the session challenge is
+    bound as AEAD data to prevent replay.
+  - New key commands: `cipherjet-keygen net-server | net-client | net-allow`.
+  - Cross-platform TCP layer (BSD sockets / Winsock).
+
 ## [1.0.1] — 2026-09-29
 
 ### Added
@@ -45,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project website (`docs/`).
 - Dependency-free unit test suite (58 checks).
 
-[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Eselase-Noble/securedrv/releases/tag/v1.0.0

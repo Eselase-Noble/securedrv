@@ -13,11 +13,14 @@
 // =============================================================================
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <string>
 
 #include "securedrv/config.hpp"
 #include "securedrv/key_manager.hpp"
+#include "securedrv/net_keys.hpp"
 #include "securedrv/platform.hpp"
+#include "securedrv/util.hpp"
 #include "securedrv/errors.hpp"
 
 #ifndef CIPHERJET_VERSION
@@ -30,10 +33,13 @@ namespace {
 
 void usage() {
     std::cerr <<
-        "cipherjet-keygen — master key management\n"
+        "cipherjet-keygen — key management\n"
         "Usage:\n"
         "  cipherjet-keygen init   [--strength interactive|moderate|sensitive]\n"
-        "  cipherjet-keygen change [--strength ...]\n\n"
+        "  cipherjet-keygen change [--strength ...]\n"
+        "  cipherjet-keygen net-server           create the server network key\n"
+        "  cipherjet-keygen net-client           create a client identity\n"
+        "  cipherjet-keygen net-allow <key-hex>  authorise a client on the server\n\n"
         "Environment:\n"
         "  CIPHERJET_PASSPHRASE       passphrase (init) / OLD passphrase (change)\n"
         "  CIPHERJET_NEW_PASSPHRASE   new passphrase (change)\n"
@@ -87,6 +93,37 @@ int main(int argc, char** argv) try {
         std::string newp = require_env("CIPHERJET_NEW_PASSPHRASE");
         KeyManager::change_passphrase(cfg.key_path, oldp, newp, strength);
         std::cerr << "cipherjet-keygen: passphrase rotated for " << cfg.key_path << "\n";
+        return 0;
+    }
+
+    // ---- Networking keys ----------------------------------------------------
+    if (cmd == "net-server") {
+        std::string pk = net::create_server_box_key(cfg.data_dir);
+        std::cerr << "cipherjet-keygen: created server key in " << cfg.data_dir << "\n";
+        std::cerr << "  Give this SERVER PUBLIC KEY to clients (--server-key):\n";
+        std::cout << pk << "\n";
+        return 0;
+    }
+
+    if (cmd == "net-client") {
+        std::string pk = net::create_client_identity(cfg.data_dir);
+        std::cerr << "cipherjet-keygen: created client identity in " << cfg.data_dir << "\n";
+        std::cerr << "  Send this CLIENT PUBLIC KEY to the server admin to authorise it\n"
+                     "  (add it via 'cipherjet-keygen net-allow <key>' on the server):\n";
+        std::cout << pk << "\n";
+        return 0;
+    }
+
+    if (cmd == "net-allow") {
+        if (argc < 3) { std::cerr << "usage: cipherjet-keygen net-allow <client-pubkey-hex>\n"; return 2; }
+        net::PublicKey pk = net::parse_pubkey_hex(argv[2]);  // validate
+        std::string path = platform::path_join(cfg.data_dir, "authorized_clients");
+        std::ofstream f(path, std::ios::app | std::ios::binary);
+        if (!f) throw IoError("cannot open allowlist: " + path);
+        f << util::to_hex(pk.data(), pk.size()) << "\n";
+        f.flush();
+        platform::restrict_to_owner(path);
+        std::cerr << "cipherjet-keygen: authorised client in " << path << "\n";
         return 0;
     }
 

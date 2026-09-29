@@ -75,7 +75,8 @@ jobs:
           ASSET="cipherjet-${OSL}-${ARCH}.tar.gz"
           PKG="cipherjet-${VERSION}-${OSL}-${ARCH}"
           mkdir -p "dist/$PKG/bin" "dist/$PKG/install"
-          cp build/cipherjet build/cipherjet-release build/cipherjet-keygen "dist/$PKG/bin/"
+          cp build/cipherjet build/cipherjet-release build/cipherjet-keygen \
+             build/cipherjet-send build/cipherjet-server "dist/$PKG/bin/"
           cp install/install-cups-printer.sh install/uninstall-cups-printer.sh "dist/$PKG/install/"
           cp README.md LICENSE "dist/$PKG/"
           tar -C dist -czf "$ASSET" "$PKG"
@@ -89,7 +90,7 @@ jobs:
           $ASSET = "cipherjet-windows-x86_64.zip"
           $PKG = "dist/cipherjet-$VERSION-windows-x86_64"
           New-Item -ItemType Directory -Force -Path "$PKG/bin" | Out-Null
-          Copy-Item build/Release/cipherjet.exe,build/Release/cipherjet-release.exe,build/Release/cipherjet-keygen.exe "$PKG/bin/"
+          Copy-Item build/Release/cipherjet.exe,build/Release/cipherjet-release.exe,build/Release/cipherjet-keygen.exe,build/Release/cipherjet-send.exe,build/Release/cipherjet-server.exe "$PKG/bin/"
           Copy-Item README.md,LICENSE "$PKG/"
           Compress-Archive -Path "$PKG" -DestinationPath $ASSET -Force
           "ASSET=$ASSET" | Out-File -FilePath $env:GITHUB_ENV -Append

@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.1-5eead4">
+  <img alt="version" src="https://img.shields.io/badge/version-1.1.0-5eead4">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
   <img alt="platforms" src="https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-1e2838">
 </p>
@@ -219,6 +219,47 @@ If none of the first three is set, the passphrase is read from
 Default data directory:
 * Linux/macOS: `$XDG_DATA_HOME/cipherjet` or `~/.local/share/cipherjet`
 * Windows: `%APPDATA%\Cipherjet`
+
+---
+
+## Secure networked printing
+
+Clients can print to a printer on a **different network** — home, mobile, another
+office, across the internet. The printer stays with the server; clients just
+reach the server's address.
+
+```
+ client (any network)                              print server (with the printer)
+  cipherjet-send  ──── TCP (sealed to server key) ───▶  cipherjet-server
+  seals the job to the server's public key;             authenticates the client,
+  holds NO key that can decrypt it                       opens the job, releases to lp
+```
+
+- **End-to-end:** each job's key is sealed to the server's X25519 public key
+  (`crypto_box_seal`). Only the server can open it, so a plain socket over the
+  public internet is safe — no VPN required (though you may still use one).
+- **Client auth:** an Ed25519 signature over a per-connection challenge, checked
+  against the server's allowlist. Metadata rides inside the encrypted stream;
+  the challenge is bound as AEAD data to stop replay.
+- **Server-key pinning:** clients are given the server's public key out of band —
+  stronger than CA/TLS trust here, since an impostor server can't read jobs.
+
+```bash
+# --- on the server (where the printer is) ---
+cipherjet-keygen net-server          # prints the SERVER PUBLIC KEY (share with clients)
+cipherjet-keygen net-allow <client-public-key>
+cipherjet-server --port 9310 --printer <cups-printer-name>
+
+# --- on each client ---
+cipherjet-keygen net-client          # prints the CLIENT PUBLIC KEY (send to the server admin)
+cipherjet-send --host server.example.com --port 9310 \
+               --server-key <SERVER PUBLIC KEY> report.pdf
+```
+
+**Reachability across networks:** point `--host` at the server's public DNS/IP
+with its port open (forwarded through the firewall/NAT), or reach it over a VPN
+or tunnel if it has no public endpoint. TLS is optional — it would only add
+metadata/identity hiding on the wire, since the job itself is already sealed.
 
 ---
 

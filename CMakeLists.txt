@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(Cipherjet
-    VERSION 1.0.1
+    VERSION 1.1.0
     DESCRIPTION "Cipherjet — enterprise encrypting printer driver using libsodium"
     LANGUAGES CXX)
 
@@ -99,12 +99,20 @@ add_library(securedrv_core STATIC
     src/audit_log.cpp
     src/spool.cpp
     src/config.cpp
+    src/net_keys.cpp
+    src/net_crypto.cpp
+    src/socket.cpp
 )
 
 target_include_directories(securedrv_core
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(securedrv_core PUBLIC securedrv_sodium)
+
+# Windows sockets live in ws2_32; POSIX sockets need no extra library.
+if(WIN32)
+    target_link_libraries(securedrv_core PUBLIC ws2_32)
+endif()
 
 # Propagate the project version into the code as CIPHERJET_VERSION so every
 # executable can answer `--version`. Single source of truth: project(... VERSION).
@@ -124,6 +132,13 @@ target_link_libraries(cipherjet-release PRIVATE securedrv_core)
 add_executable(cipherjet-keygen  tools/keygen_main.cpp)
 target_link_libraries(cipherjet-keygen  PRIVATE securedrv_core)
 
+# Networked printing: client sender and server/release daemon.
+add_executable(cipherjet-send    tools/send_main.cpp)
+target_link_libraries(cipherjet-send    PRIVATE securedrv_core)
+
+add_executable(cipherjet-server  tools/server_main.cpp)
+target_link_libraries(cipherjet-server  PRIVATE securedrv_core)
+
 # =============================================================================
 #  Tests
 # =============================================================================
@@ -135,4 +150,5 @@ add_test(NAME unit_tests COMMAND securedrv_tests)
 # ---- Install rules (enterprise deployment) ----------------------------------
 include(GNUInstallDirs)
 install(TARGETS cipherjet cipherjet-release cipherjet-keygen
+                cipherjet-send cipherjet-server
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

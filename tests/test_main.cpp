@@ -13,7 +13,9 @@
 // =============================================================================
 #include <sodium.h>
 
+#include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -26,6 +28,8 @@
 #include "securedrv/crypto_engine.hpp"
 #include "securedrv/errors.hpp"
 #include "securedrv/key_manager.hpp"
+#include "securedrv/net_crypto.hpp"
+#include "securedrv/net_keys.hpp"
 #include "securedrv/secure_buffer.hpp"
 
 using namespace securedrv;
@@ -252,6 +256,89 @@ static void test_audit_log(const std::string& home) {
     CHECK(bad == 2);
 }
 
+// Helper: make a ByteSource that reads from a std::string.
+static net::ByteSource string_source(const std::string& s, std::size_t& pos) {
+    return [&s, &pos](std::uint8_t* b, std::size_t n) -> std::size_t {
+        std::size_t k = std::min(n, s.size() - pos);
+        std::memcpy(b, s.data() + pos, k);
+        pos += k;
+        return k;
+    };
+}
+
+static void test_net_crypto() {
+    SECTION("Sealed job round-trip + context/key checks");
+    net::ServerBoxKey server;
+    crypto_box_keypair(server.pk.data(), server.sk.data());
+
+    std::string plain = make_payload(9000);
+    std::uint8_t ctx[net::kContextBytes];
+    randombytes_buf(ctx, sizeof(ctx));
+
+    // Seal to the server's public key.
+    std::string blob;
+    {
+        std::size_t pos = 0;
+        auto src = string_source(plain, pos);
+        net::ByteSink sink = [&](const std::uint8_t* d, std::size_t n) {
+            blob.append(reinterpret_cast<const char*>(d), n);
+        };
+        std::uint8_t jid[16];
+        std::uint64_t n = net::seal_job(src, sink, server.pk, ctx, "net-doc", 4242, jid);
+        CHECK(n == plain.size());
+    }
+
+    // Open with the right key and context.
+    {
+        std::size_t pos = 0;
+        auto src = string_source(blob, pos);
+        std::string out;
+        net::ByteSink sink = [&](const std::uint8_t* d, std::size_t n) {
+            out.append(reinterpret_cast<const char*>(d), n);
+        };
+        net::SealedJobMeta meta;
+        net::open_job(src, sink, server, ctx, meta);
+        CHECK(out == plain);
+        CHECK(meta.title == "net-doc");
+        CHECK(meta.created_unix == 4242);
+        CHECK(meta.plaintext_bytes == plain.size());
+    }
+
+    // Wrong context (replay into a different session) is rejected.
+    {
+        std::uint8_t bad[net::kContextBytes];
+        randombytes_buf(bad, sizeof(bad));
+        std::size_t pos = 0;
+        auto src = string_source(blob, pos);
+        std::string out;
+        net::ByteSink sink = [&](const std::uint8_t* d, std::size_t n) {
+            out.append(reinterpret_cast<const char*>(d), n);
+        };
+        net::SealedJobMeta meta;
+        bool threw = false;
+        try { net::open_job(src, sink, server, bad, meta); }
+        catch (const IntegrityError&) { threw = true; }
+        CHECK(threw);
+    }
+
+    // A different server key cannot open the job.
+    {
+        net::ServerBoxKey other;
+        crypto_box_keypair(other.pk.data(), other.sk.data());
+        std::size_t pos = 0;
+        auto src = string_source(blob, pos);
+        std::string out;
+        net::ByteSink sink = [&](const std::uint8_t* d, std::size_t n) {
+            out.append(reinterpret_cast<const char*>(d), n);
+        };
+        net::SealedJobMeta meta;
+        bool threw = false;
+        try { net::open_job(src, sink, other, ctx, meta); }
+        catch (const IntegrityError&) { threw = true; }
+        CHECK(threw);
+    }
+}
+
 int main() {
     if (sodium_init() < 0) {
         std::cerr << "sodium_init failed\n";
@@ -276,6 +363,7 @@ int main() {
     test_key_manager(home.string());
     test_key_manager_end_to_end(home.string());
     test_audit_log(home.string());
+    test_net_crypto();
 
     // Clean up the temp directory (best effort).
     std::error_code ec;

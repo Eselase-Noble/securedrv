@@ -284,6 +284,8 @@
     <dd>Every job is logged in an append-only, hash-chained ledger. Editing or deleting any line breaks the chain, and the break is easy to find.</dd>
     <dt>Platforms</dt>
     <dd>One portable engine across Linux, macOS and Windows. It registers as an ordinary printer, so people simply choose it and press print.</dd>
+    <dt>Over the network</dt>
+    <dd>Print to a printer on another network. Jobs are sealed to the print server's key and streamed over TCP; the client holds no key that can decrypt, so it is safe even over the open internet.</dd>
     <dt>License</dt>
     <dd>MIT. A small, readable codebase with a test suite you can run yourself before you trust it with anything.</dd>
   </dl>
@@ -377,7 +379,7 @@
 <footer><div class="wrap">
   <div class="sig">
     <div class="name">Noble Eselase Vulley</div>
-    <div class="meta">Cipherjet, version 1.0.1. Released under the MIT License, 2026.</div>
+    <div class="meta">Cipherjet, version 1.1.0. Released under the MIT License, 2026.</div>
   </div>
   <div class="flinks">
     <a href="https://github.com/Eselase-Noble/securedrv">Source</a>
