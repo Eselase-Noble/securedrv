@@ -1,15 +1,15 @@
 # =============================================================================
 #  CodeQL — automated security code review for C/C++.
-#  Runs on every push and pull request to main, plus a weekly scan. Findings
+#  Runs on every push and pull request to production, plus a weekly scan. Findings
 #  appear in the Security tab and are annotated inline on pull requests.
 # =============================================================================
 name: CodeQL
 
 on:
   push:
-    branches: [ main ]
+    branches: [ production ]
   pull_request:
-    branches: [ main ]
+    branches: [ production ]
   schedule:
     - cron: "0 6 * * 1"
 

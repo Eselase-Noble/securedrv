@@ -2,14 +2,14 @@
 #  Pages — publish the Cipherjet website (docs/) to GitHub Pages.
 #
 #  One-time: in the repo, Settings ▸ Pages ▸ "Build and deployment" ▸
-#  Source = "GitHub Actions". After that this deploys on every push to main
+#  Source = "GitHub Actions". After that this deploys on every push to production
 #  that touches docs/. Live URL: https://eselase-noble.github.io/securedrv/
 # =============================================================================
 name: Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [ production ]
     paths: [ 'docs/**', '.github/workflows/pages.yml' ]
   workflow_dispatch:
 
