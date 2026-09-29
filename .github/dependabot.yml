@@ -1,0 +1,11 @@
+# Automated dependency PRs. Cipherjet has no package-managed C++ dependencies,
+# but this keeps the GitHub Actions used by CI/release up to date.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    commit-message:
+      prefix: ci

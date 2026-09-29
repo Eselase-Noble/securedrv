@@ -1,0 +1,43 @@
+# =============================================================================
+#  CodeQL — automated security code review for C/C++.
+#  Runs on every push and pull request to main, plus a weekly scan. Findings
+#  appear in the Security tab and are annotated inline on pull requests.
+# =============================================================================
+name: CodeQL
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  analyze:
+    name: analyze (c-cpp)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libsodium-dev cmake pkg-config g++
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: c-cpp
+
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
