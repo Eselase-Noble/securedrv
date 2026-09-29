@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-09-29
+
 ### Added
 - Windows support: cross-platform libsodium discovery (pkg-config / vcpkg
   `unofficial-sodium` / manual), MSVC-appropriate hardening flags, a Windows CI
   job, and a prebuilt `cipherjet-windows-x86_64.zip` (statically linked, no DLLs)
   attached to releases and offered on the website.
+
+### Fixed
+- Mobile navigation: header links were hidden on narrow screens; the masthead
+  now stacks so every link stays visible.
+- Audit-log tamper test made line-ending safe so it passes on Windows.
 
 ## [1.0.0] — 2026-09-28
 
@@ -38,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project website (`docs/`).
 - Dependency-free unit test suite (58 checks).
 
-[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/Eselase-Noble/securedrv/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Eselase-Noble/securedrv/releases/tag/v1.0.0
